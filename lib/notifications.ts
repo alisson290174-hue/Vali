@@ -91,6 +91,23 @@ export function scheduleFinalReminder(item: Item): Promise<string | null> {
   );
 }
 
+export type UpcomingReminder = { date: Date; kind: 'early' | 'final' };
+
+export function getNextReminder(item: Item): UpcomingReminder | null {
+  const candidates: UpcomingReminder[] = [];
+
+  if (item.reminderDaysBefore) {
+    const early = buildTriggerDate(item.expiryDate, item.reminderDaysBefore, EARLY_REMINDER_HOUR);
+    if (early.getTime() > Date.now()) candidates.push({ date: early, kind: 'early' });
+  }
+
+  const final = buildTriggerDate(item.expiryDate, 0, FINAL_REMINDER_HOUR);
+  if (final.getTime() > Date.now()) candidates.push({ date: final, kind: 'final' });
+
+  if (candidates.length === 0) return null;
+  return candidates.sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+}
+
 export async function cancelReminder(notificationId: string | null): Promise<void> {
   if (!notificationId) return;
   try {

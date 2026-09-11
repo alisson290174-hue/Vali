@@ -31,7 +31,7 @@ import type { Item } from '../db/types';
 import { colors } from '../lib/theme';
 import { countDistinctStores, daysUntil, filterByCriteria, sortByUrgency } from '../lib/records';
 import { pickPhoto } from '../lib/photo';
-import { syncRemindersForItem } from '../lib/notifications';
+import { getNextReminder, syncRemindersForItem } from '../lib/notifications';
 
 function pad2(value: number): string {
   return String(value).padStart(2, '0');
@@ -82,6 +82,7 @@ export default function IndexScreen() {
   const pendingCount = records.filter((record) => record.status === 'Pendente').length;
   const storeCount = countDistinctStores(records);
   const urgentStoreCount = countDistinctStores(urgentRecords);
+  const hasUpcomingReminder = records.some((record) => record.alertEnabled && getNextReminder(record) !== null);
 
   async function addRecord() {
     if (!itemName.trim() || !expiryDate.trim()) return;
@@ -134,9 +135,9 @@ export default function IndexScreen() {
             <Text style={styles.eyebrow}>BOM DIA, PROMOTOR</Text>
             <Text style={styles.title}>Sua validade{`\n`}sob controle.</Text>
           </View>
-          <Pressable style={styles.bellButton} accessibilityLabel="Notificações">
+          <Pressable style={styles.bellButton} accessibilityLabel="Notificações" onPress={() => router.push('/notifications')}>
             <Bell size={21} color={colors.plum} strokeWidth={2.2} />
-            <View style={styles.notificationDot} />
+            {hasUpcomingReminder && <View style={styles.notificationDot} />}
           </Pressable>
         </View>
 

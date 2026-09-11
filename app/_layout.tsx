@@ -32,6 +32,17 @@ export default function RootLayout() {
             headerTitleStyle: { color: colors.ink },
           }}
         />
+        <Stack.Screen
+          name="notifications"
+          options={{
+            headerShown: true,
+            title: 'Notificações',
+            headerBackTitle: 'Voltar',
+            headerStyle: { backgroundColor: colors.cream },
+            headerTintColor: colors.plum,
+            headerTitleStyle: { color: colors.ink },
+          }}
+        />
       </Stack>
     </SafeAreaProvider>
   );
