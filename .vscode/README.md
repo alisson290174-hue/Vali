@@ -13,5 +13,3 @@ Comandos disponiveis em Tasks:
 - Vali: iniciar Expo
 - Vali: verificar TypeScript
 - Vali: verificar Expo
-
-As skills locais ficam em `.agents/skills` e `.claude/skills`.

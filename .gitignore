@@ -36,6 +36,11 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# AI agent tooling (local only, not published)
+.claude/
+.agents/
+skills-lock.json
+
 # generated native folders
 /ios
 /android
