@@ -1,7 +1,7 @@
 {
   "name": "vali",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.15",
     "date-fns": "^4.4.0",

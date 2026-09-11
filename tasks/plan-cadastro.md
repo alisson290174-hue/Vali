@@ -6,7 +6,8 @@ Segunda fatia sobre a base de SQLite (ver [plan.md](plan.md), já concluído). F
 
 ## Architecture Decisions
 
-- **Um único modal de "Detalhes do item"** reaproveitado tanto pra edição quanto pra exclusão e troca de status, aberto ao tocar numa linha da lista — evita criar uma tela nova/rota separada nesta fase (app ainda não usa Expo Router para navegação real).
+- **[ATUALIZADO após [plan-router.md](plan-router.md)]** O app agora usa Expo Router de verdade. A ideia original de "um único modal de Detalhes" reaproveitado pra edição/exclusão/status **muda**: quando essa fase for retomada, o modal vira uma rota (`app/item/[id].tsx`), consistente com `app/all-items.tsx`. Confirmar com o usuário antes de implementar — texto abaixo mantido como registro histórico da decisão original.
+- ~~Um único modal de "Detalhes do item" reaproveitado tanto pra edição quanto pra exclusão e troca de status, aberto ao tocar numa linha da lista — evita criar uma tela nova/rota separada nesta fase (app ainda não usa Expo Router para navegação real).~~
 - **Campos opcionais entram direto no modal de cadastro** (não um formulário em duas etapas), já que a diretriz do AGENTS.md é "podem ser preenchidos depois" — isso continua verdade porque nenhum é obrigatório, só ficam disponíveis desde já em vez de forçar uma edição posterior pra usá-los.
 - **Foto via `expo-image-picker`** (já instalado): apenas selecionar da galeria nesta fatia (sem câmera nem upload), guardando a URI local no campo `photoUri` já existente no schema.
 - **Excluir é uma ação destrutiva com confirmação** (`Alert.alert` nativo, sem lib nova) antes de chamar `deleteItem`.

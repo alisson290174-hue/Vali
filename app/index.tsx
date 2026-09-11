@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { differenceInCalendarDays, parse } from 'date-fns';
 import * as ImagePicker from 'expo-image-picker';
 import {
   AlertTriangle,
@@ -21,7 +21,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -29,35 +28,19 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { insertItem, listItems, seedIfEmpty } from './db/items';
-import type { Item } from './db/types';
-
-function daysUntil(expiryDate: string): number {
-  const parsed = parse(expiryDate, 'dd/MM/yyyy', new Date());
-  return differenceInCalendarDays(parsed, new Date());
-}
-
-function urgencyLabel(days: number): string {
-  if (days <= 3) return 'Urgente';
-  if (days <= 7) return 'Atenção';
-  return 'No prazo';
-}
-
-function formatDateInput(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
-  return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join('/');
-}
-
-function sortByUrgency(records: Item[]): Item[] {
-  return [...records].sort((a, b) => daysUntil(a.expiryDate) - daysUntil(b.expiryDate));
-}
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ExpiryRow } from '../components/ExpiryRow';
+import { insertItem, listItems, seedIfEmpty } from '../db/items';
+import type { Item } from '../db/types';
+import { colors } from '../lib/theme';
+import { filterByCriteria, formatDateInput, sortByUrgency } from '../lib/records';
 
 const HOME_PREVIEW_LIMIT = 5;
 
-export default function App() {
+export default function IndexScreen() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isAllOpen, setIsAllOpen] = useState(false);
   const [itemName, setItemName] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [store, setStore] = useState('');
@@ -81,14 +64,8 @@ export default function App() {
     };
   }, []);
 
-  const visibleRecords = records.filter((record) => {
-    const days = daysUntil(record.expiryDate);
-    if (activeFilter === 'Urgentes') return days <= 3;
-    if (activeFilter === 'Esta semana') return days <= 7;
-    return true;
-  });
+  const visibleRecords = filterByCriteria(records, activeFilter);
   const homePreviewRecords = sortByUrgency(visibleRecords).slice(0, HOME_PREVIEW_LIMIT);
-  const allRecordsSorted = sortByUrgency(records);
 
   async function addRecord() {
     if (!itemName.trim() || !expiryDate.trim()) return;
@@ -148,7 +125,7 @@ export default function App() {
           </Pressable>
         </View>
 
-        <View style={styles.summaryCard}>
+        <Pressable style={styles.summaryCard} onPress={() => router.push('/all-items?filter=Urgentes')}>
           <View style={styles.summaryOrb} />
           <View style={styles.summaryContent}>
             <Text style={styles.summaryLabel}>ATENÇÃO HOJE</Text>
@@ -156,21 +133,21 @@ export default function App() {
             <Text style={styles.summaryDescription}>em 2 lojas precisam de você</Text>
           </View>
           <AlertTriangle size={52} color={colors.oliveLight} strokeWidth={1.3} />
-        </View>
+        </Pressable>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Visão geral</Text>
           <Text style={styles.sectionMeta}>12 registros</Text>
         </View>
         <View style={styles.metricRow}>
-          <Metric icon={<Clock3 size={18} color={colors.orange} />} value="03" label="Urgentes" tone="orange" />
-          <Metric icon={<CircleCheck size={18} color={colors.olive} />} value="06" label="Pendentes" tone="olive" />
-          <Metric icon={<Store size={18} color={colors.plum} />} value="04" label="Lojas" tone="plum" />
+          <Metric icon={<Clock3 size={18} color={colors.orange} />} value="03" label="Urgentes" tone="orange" onPress={() => router.push('/all-items?filter=Urgentes')} />
+          <Metric icon={<CircleCheck size={18} color={colors.olive} />} value="06" label="Pendentes" tone="olive" onPress={() => router.push('/all-items?filter=Pendentes')} />
+          <Metric icon={<Store size={18} color={colors.plum} />} value="04" label="Lojas" tone="plum" onPress={() => router.push('/all-items')} />
         </View>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Registros recentes</Text>
-          <Pressable onPress={() => setIsAllOpen(true)}>
+          <Pressable onPress={() => router.push('/all-items')}>
             <Text style={styles.linkText}>Ver todos</Text>
           </Pressable>
         </View>
@@ -273,44 +250,31 @@ export default function App() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-
-      <Modal visible={isAllOpen} animationType="slide" onRequestClose={() => setIsAllOpen(false)}>
-        <SafeAreaView style={styles.allListSafeArea}>
-          <View style={styles.allListHeader}>
-            <View>
-              <Text style={styles.modalEyebrow}>TODOS OS ITENS</Text>
-              <Text style={styles.modalTitle}>Ordenados por vencimento mais próximo</Text>
-            </View>
-            <Pressable onPress={() => setIsAllOpen(false)} style={styles.closeButton}>
-              <X size={20} color={colors.ink} />
-            </Pressable>
-          </View>
-          <FlatList
-            data={allRecordsSorted}
-            keyExtractor={(record) => record.id}
-            renderItem={({ item }) => <ExpiryRow record={item} />}
-            contentContainerStyle={styles.allListContent}
-            ListEmptyComponent={<Text style={styles.emptyText}>Nenhum item cadastrado ainda.</Text>}
-          />
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 }
 
-function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: 'orange' | 'olive' | 'plum' }) {
-  return <View style={styles.metric}><View style={[styles.metricIcon, { backgroundColor: colors[`${tone}Wash`] }]}>{icon}</View><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>;
+function Metric({
+  icon,
+  value,
+  label,
+  tone,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  label: string;
+  tone: 'orange' | 'olive' | 'plum';
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.metric} onPress={onPress}>
+      <View style={[styles.metricIcon, { backgroundColor: colors[`${tone}Wash`] }]}>{icon}</View>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </Pressable>
+  );
 }
-
-function ExpiryRow({ record }: { record: Item }) {
-  const days = daysUntil(record.expiryDate);
-  const isUrgent = days <= 3;
-  return <View style={styles.recordRow}><View style={[styles.recordImage, isUrgent && styles.recordImageUrgent]}><Text style={styles.recordImageText}>{record.item.charAt(0)}</Text></View><View style={styles.recordMain}><Text style={styles.recordName} numberOfLines={1}>{record.item}</Text><View style={styles.storeLine}><Store size={13} color={colors.muted} /><Text style={styles.storeText} numberOfLines={1}>{record.store ?? 'Sem loja definida'}</Text></View><Text style={styles.recordQuantity}>{record.quantity ?? 'Não informado'}</Text></View><View style={styles.recordRight}><View style={[styles.statusPill, isUrgent ? styles.statusUrgent : styles.statusNormal]}><Text style={[styles.statusText, isUrgent && styles.statusTextUrgent]}>{urgencyLabel(days)}</Text></View><Text style={styles.recordDate}>{record.expiryDate}</Text></View></View>;
-}
-
-const colors = {
-  cream: '#F7F3EA', white: '#FFFFFF', ink: '#29262B', muted: '#8B858C', plum: '#4C2B52', plumLight: '#8A648F', olive: '#697548', oliveLight: '#C0C98C', orange: '#CE704F', orangeWash: '#FBE5DB', oliveWash: '#E9EBD9', plumWash: '#EDE4EF',
-};
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.cream },
@@ -345,22 +309,6 @@ const styles = StyleSheet.create({
   filterActive: { backgroundColor: colors.olive },
   filterText: { color: colors.muted, fontSize: 12, fontWeight: '600' },
   filterTextActive: { color: colors.cream },
-  recordRow: { backgroundColor: colors.white, borderRadius: 17, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
-  recordImage: { width: 52, height: 58, borderRadius: 13, backgroundColor: colors.oliveWash, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  recordImageUrgent: { backgroundColor: colors.orangeWash },
-  recordImageText: { color: colors.olive, fontSize: 21, fontWeight: '700' },
-  recordMain: { flex: 1, minWidth: 0 },
-  recordName: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 5 },
-  storeLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 7 },
-  storeText: { color: colors.muted, fontSize: 11, flexShrink: 1 },
-  recordQuantity: { color: colors.olive, fontSize: 11, fontWeight: '700' },
-  recordRight: { alignItems: 'flex-end', marginLeft: 8 },
-  statusPill: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, marginBottom: 8 },
-  statusUrgent: { backgroundColor: colors.orangeWash },
-  statusNormal: { backgroundColor: colors.oliveWash },
-  statusText: { color: colors.olive, fontSize: 10, fontWeight: '700' },
-  statusTextUrgent: { color: colors.orange },
-  recordDate: { color: colors.ink, fontSize: 11, fontWeight: '600' },
   emptyText: { color: colors.muted, textAlign: 'center', padding: 25 },
   fab: { position: 'absolute', bottom: 24, right: 22, borderRadius: 28, backgroundColor: colors.plum, height: 54, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 5, shadowColor: colors.plum, shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
   fabText: { color: colors.cream, fontSize: 14, fontWeight: '700' },
@@ -373,7 +321,6 @@ const styles = StyleSheet.create({
   closeButton: { backgroundColor: colors.white, padding: 8, borderRadius: 20 },
   inputLabel: { color: colors.ink, fontSize: 12, fontWeight: '700', marginBottom: 7 },
   input: { height: 50, borderRadius: 13, backgroundColor: colors.white, paddingHorizontal: 15, color: colors.ink, fontSize: 15, marginBottom: 16 },
-  optionalHint: { color: colors.muted, fontSize: 12, lineHeight: 18, marginBottom: 20 },
   photoButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 16 },
   photoThumbnail: { width: 32, height: 32, borderRadius: 8 },
   photoButtonText: { color: colors.plum, fontSize: 14, fontWeight: '600' },
@@ -382,7 +329,4 @@ const styles = StyleSheet.create({
   saveButton: { height: 52, borderRadius: 15, backgroundColor: colors.plum, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   saveButtonDisabled: { opacity: 0.45 },
   saveButtonText: { color: colors.cream, fontSize: 15, fontWeight: '700' },
-  allListSafeArea: { flex: 1, backgroundColor: colors.cream },
-  allListHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 22, paddingTop: 16, marginBottom: 16 },
-  allListContent: { paddingHorizontal: 22, paddingBottom: 40 },
 });
