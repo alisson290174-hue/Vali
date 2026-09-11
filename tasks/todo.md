@@ -11,11 +11,11 @@ Ver plano completo em [plan.md](plan.md).
 **Acceptance criteria:**
 - [x] `db/database.ts` exporta uma função `getDatabase()` que abre/retorna a instância via `expo-sqlite` (`openDatabaseAsync`)
 - [x] Tabela `items` criada com colunas: `id`, `item` (NOT NULL), `expiryDate` (NOT NULL), `store`, `photoUri`, `quantity`, `brand`, `note`, `alertEnabled`, `status` (default `'Pendente'`), `createdAt`
-- [ ] Rodar o app não gera erro no console ao inicializar o banco *(pendente: verificação manual no Expo Go)*
+- [x] Rodar o app não gera erro no console ao inicializar o banco *(confirmado no Expo Go, iPhone)*
 
 **Verification:**
 - [x] `npx tsc --noEmit`
-- [ ] Manual: `npx expo start`, abrir no Expo Go, checar log/console sem erro de SQLite *(pendente)*
+- [x] Manual: `npx expo start`, abrir no Expo Go, checar log/console sem erro de SQLite
 
 **Dependencies:** None
 
@@ -38,7 +38,7 @@ Ver plano completo em [plan.md](plan.md).
 
 **Verification:**
 - [x] `npx tsc --noEmit`
-- [ ] Teste manual isolado confirma dado persiste entre chamadas *(pendente: verificação manual no Expo Go)*
+- [x] Teste manual isolado confirma dado persiste entre chamadas
 
 **Dependencies:** Task 1
 
@@ -53,7 +53,7 @@ Ver plano completo em [plan.md](plan.md).
 ## Checkpoint: Foundation
 - [x] `npx tsc --noEmit` limpo
 - [x] `npx expo-doctor` sem erros novos
-- [ ] Banco abre e cria tabela sem crash *(pendente: verificação manual no Expo Go)*
+- [x] Banco abre e cria tabela sem crash
 
 ## Phase 2: Core Integration
 
@@ -68,7 +68,7 @@ Ver plano completo em [plan.md](plan.md).
 
 **Verification:**
 - [x] `npx tsc --noEmit`
-- [ ] Manual: abrir app, lista carrega do banco (vazio na primeira vez) *(pendente)*
+- [x] Manual: abrir app, lista carrega do banco
 
 **Dependencies:** Task 2
 
@@ -90,7 +90,7 @@ Ver plano completo em [plan.md](plan.md).
 
 **Verification:**
 - [x] `npx tsc --noEmit`
-- [ ] Manual: cadastrar item → aparece na lista → fechar e reabrir o Expo Go → item continua lá *(pendente)*
+- [x] Manual: cadastrar item → aparece na lista → fechar e reabrir o Expo Go → item continua lá *(confirmado 2x pelo usuário, incluindo com múltiplos itens)*
 
 **Dependencies:** Task 3
 
@@ -102,7 +102,7 @@ Ver plano completo em [plan.md](plan.md).
 ---
 
 ## Checkpoint: Core Integration
-- [ ] Fluxo manual completo: cadastrar → persistir → sobreviver a reload do app *(pendente: verificação manual no Expo Go)*
+- [x] Fluxo manual completo: cadastrar → persistir → sobreviver a reload do app
 
 ## Phase 3: Polish
 
@@ -117,7 +117,7 @@ Ver plano completo em [plan.md](plan.md).
 
 **Verification:**
 - [x] `npx tsc --noEmit`
-- [ ] Manual: apagar o app do Expo Go (ou limpar storage), reabrir, confirma seed aparece uma vez só *(pendente)*
+- [ ] Manual: apagar o app do Expo Go (ou limpar storage), reabrir, confirma seed aparece uma vez só *(não testado — cenário de baixo risco, seed já se comportou corretamente na primeira abertura)*
 
 **Dependencies:** Task 4
 
@@ -150,6 +150,6 @@ Ver plano completo em [plan.md](plan.md).
 
 ## Checkpoint: Complete
 - [x] `npx tsc --noEmit` e `npx expo-doctor` limpos
-- [ ] Fluxo end-to-end validado manualmente no Expo Go *(pendente — não consigo testar UI mobile neste ambiente)*
+- [x] Fluxo end-to-end validado manualmente no Expo Go (usuário testou no iPhone via VS Code + túnel de porta corrigido no firewall)
 - [x] README reflete o estado real do projeto
 - [ ] Review com o usuário antes de seguir para notificações locais

@@ -1,9 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { differenceInCalendarDays, parse } from 'date-fns';
+import * as ImagePicker from 'expo-image-picker';
 import {
   AlertTriangle,
   Bell,
+  Camera,
   ChevronRight,
   CircleCheck,
   Clock3,
@@ -12,7 +14,9 @@ import {
   X,
 } from 'lucide-react-native';
 import {
+  Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -20,6 +24,7 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -38,11 +43,29 @@ function urgencyLabel(days: number): string {
   return 'No prazo';
 }
 
+function formatDateInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join('/');
+}
+
+function sortByUrgency(records: Item[]): Item[] {
+  return [...records].sort((a, b) => daysUntil(a.expiryDate) - daysUntil(b.expiryDate));
+}
+
+const HOME_PREVIEW_LIMIT = 5;
+
 export default function App() {
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isAllOpen, setIsAllOpen] = useState(false);
   const [itemName, setItemName] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
+  const [store, setStore] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [brand, setBrand] = useState('');
+  const [note, setNote] = useState('');
+  const [alertEnabled, setAlertEnabled] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [records, setRecords] = useState<Item[]>([]);
 
   useEffect(() => {
@@ -64,14 +87,50 @@ export default function App() {
     if (activeFilter === 'Esta semana') return days <= 7;
     return true;
   });
+  const homePreviewRecords = sortByUrgency(visibleRecords).slice(0, HOME_PREVIEW_LIMIT);
+  const allRecordsSorted = sortByUrgency(records);
 
   async function addRecord() {
     if (!itemName.trim() || !expiryDate.trim()) return;
-    const created = await insertItem({ item: itemName.trim(), expiryDate: expiryDate.trim() });
+    const created = await insertItem({
+      item: itemName.trim(),
+      expiryDate: expiryDate.trim(),
+      store: store.trim() || undefined,
+      quantity: quantity.trim() || undefined,
+      brand: brand.trim() || undefined,
+      note: note.trim() || undefined,
+      alertEnabled,
+      photoUri: photoUri ?? undefined,
+    });
     setRecords((current) => [created, ...current]);
+    resetForm();
+    setIsAddOpen(false);
+  }
+
+  function resetForm() {
     setItemName('');
     setExpiryDate('');
-    setIsAddOpen(false);
+    setStore('');
+    setQuantity('');
+    setBrand('');
+    setNote('');
+    setAlertEnabled(false);
+    setPhotoUri(null);
+  }
+
+  async function pickPhoto() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permissão necessária', 'Autorize o acesso às fotos para anexar uma imagem ao item.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.6,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      setPhotoUri(result.assets[0].uri);
+    }
   }
 
   return (
@@ -111,7 +170,9 @@ export default function App() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Registros recentes</Text>
-          <Pressable><Text style={styles.linkText}>Ver todos</Text></Pressable>
+          <Pressable onPress={() => setIsAllOpen(true)}>
+            <Text style={styles.linkText}>Ver todos</Text>
+          </Pressable>
         </View>
         <View style={styles.filters}>
           {['Todos', 'Urgentes', 'Esta semana'].map((filter) => (
@@ -126,7 +187,7 @@ export default function App() {
         </View>
 
         <FlatList
-          data={visibleRecords}
+          data={homePreviewRecords}
           scrollEnabled={false}
           keyExtractor={(record) => record.id}
           renderItem={({ item }) => <ExpiryRow record={item} />}
@@ -139,7 +200,15 @@ export default function App() {
         <Text style={styles.fabText}>Novo item</Text>
       </Pressable>
 
-      <Modal visible={isAddOpen} transparent animationType="slide" onRequestClose={() => setIsAddOpen(false)}>
+      <Modal
+        visible={isAddOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          resetForm();
+          setIsAddOpen(false);
+        }}
+      >
         <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
@@ -147,21 +216,83 @@ export default function App() {
                 <Text style={styles.modalEyebrow}>REGISTRO RÁPIDO</Text>
                 <Text style={styles.modalTitle}>O que está perto do prazo?</Text>
               </View>
-              <Pressable onPress={() => setIsAddOpen(false)} style={styles.closeButton}>
+              <Pressable
+                onPress={() => {
+                  resetForm();
+                  setIsAddOpen(false);
+                }}
+                style={styles.closeButton}
+              >
                 <X size={20} color={colors.ink} />
               </Pressable>
             </View>
-            <Text style={styles.inputLabel}>Item</Text>
-            <TextInput value={itemName} onChangeText={setItemName} placeholder="Ex.: Biscoito recheado" placeholderTextColor={colors.muted} style={styles.input} autoFocus />
-            <Text style={styles.inputLabel}>Data de vencimento</Text>
-            <TextInput value={expiryDate} onChangeText={setExpiryDate} placeholder="DD/MM/AAAA" placeholderTextColor={colors.muted} style={styles.input} keyboardType="numbers-and-punctuation" />
-            <Text style={styles.optionalHint}>Loja, foto, quantidade e alerta podem ser adicionados depois.</Text>
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Item</Text>
+              <TextInput value={itemName} onChangeText={setItemName} placeholder="Ex.: Biscoito recheado" placeholderTextColor={colors.muted} style={styles.input} autoFocus />
+              <Text style={styles.inputLabel}>Data de vencimento</Text>
+              <TextInput value={expiryDate} onChangeText={(text) => setExpiryDate(formatDateInput(text))} placeholder="DD/MM/AAAA" placeholderTextColor={colors.muted} style={styles.input} keyboardType="number-pad" maxLength={10} />
+
+              <Text style={styles.inputLabel}>Loja (opcional)</Text>
+              <TextInput value={store} onChangeText={setStore} placeholder="Ex.: Supermercado Central" placeholderTextColor={colors.muted} style={styles.input} />
+
+              <Text style={styles.inputLabel}>Quantidade (opcional)</Text>
+              <TextInput value={quantity} onChangeText={setQuantity} placeholder="Ex.: 08 un." placeholderTextColor={colors.muted} style={styles.input} />
+
+              <Text style={styles.inputLabel}>Marca (opcional)</Text>
+              <TextInput value={brand} onChangeText={setBrand} placeholder="Ex.: Italac" placeholderTextColor={colors.muted} style={styles.input} />
+
+              <Text style={styles.inputLabel}>Observação (opcional)</Text>
+              <TextInput value={note} onChangeText={setNote} placeholder="Ex.: Conferir prateleira 3" placeholderTextColor={colors.muted} style={styles.input} multiline />
+
+              <Pressable style={styles.photoButton} onPress={pickPhoto}>
+                {photoUri ? (
+                  <Image source={{ uri: photoUri }} style={styles.photoThumbnail} />
+                ) : (
+                  <Camera size={20} color={colors.plum} />
+                )}
+                <Text style={styles.photoButtonText}>{photoUri ? 'Trocar foto (opcional)' : 'Adicionar foto (opcional)'}</Text>
+              </Pressable>
+
+              <View style={styles.alertRow}>
+                <View>
+                  <Text style={styles.inputLabel}>Alerta (opcional)</Text>
+                  <Text style={styles.alertHint}>Receber lembrete perto do vencimento</Text>
+                </View>
+                <Switch
+                  value={alertEnabled}
+                  onValueChange={setAlertEnabled}
+                  trackColor={{ false: colors.oliveWash, true: colors.olive }}
+                  thumbColor={colors.white}
+                />
+              </View>
+            </ScrollView>
             <Pressable style={[styles.saveButton, (!itemName.trim() || !expiryDate.trim()) && styles.saveButtonDisabled]} onPress={addRecord} disabled={!itemName.trim() || !expiryDate.trim()}>
               <Text style={styles.saveButtonText}>Salvar item</Text>
               <ChevronRight size={19} color={colors.cream} />
             </Pressable>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={isAllOpen} animationType="slide" onRequestClose={() => setIsAllOpen(false)}>
+        <SafeAreaView style={styles.allListSafeArea}>
+          <View style={styles.allListHeader}>
+            <View>
+              <Text style={styles.modalEyebrow}>TODOS OS ITENS</Text>
+              <Text style={styles.modalTitle}>Ordenados por vencimento mais próximo</Text>
+            </View>
+            <Pressable onPress={() => setIsAllOpen(false)} style={styles.closeButton}>
+              <X size={20} color={colors.ink} />
+            </Pressable>
+          </View>
+          <FlatList
+            data={allRecordsSorted}
+            keyExtractor={(record) => record.id}
+            renderItem={({ item }) => <ExpiryRow record={item} />}
+            contentContainerStyle={styles.allListContent}
+            ListEmptyComponent={<Text style={styles.emptyText}>Nenhum item cadastrado ainda.</Text>}
+          />
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -184,7 +315,7 @@ const colors = {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.cream },
   container: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 22,
     paddingTop: 20,
     paddingBottom: 110,
@@ -234,7 +365,8 @@ const styles = StyleSheet.create({
   fab: { position: 'absolute', bottom: 24, right: 22, borderRadius: 28, backgroundColor: colors.plum, height: 54, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 5, shadowColor: colors.plum, shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
   fabText: { color: colors.cream, fontSize: 14, fontWeight: '700' },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(37, 35, 38, 0.35)' },
-  modalCard: { backgroundColor: colors.cream, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 30 },
+  modalCard: { backgroundColor: colors.cream, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 30, maxHeight: '88%' },
+  modalScroll: { marginBottom: 4 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   modalEyebrow: { color: colors.olive, fontSize: 10, fontWeight: '800', letterSpacing: 1.3, marginBottom: 6 },
   modalTitle: { color: colors.ink, fontSize: 22, fontWeight: '700' },
@@ -242,7 +374,15 @@ const styles = StyleSheet.create({
   inputLabel: { color: colors.ink, fontSize: 12, fontWeight: '700', marginBottom: 7 },
   input: { height: 50, borderRadius: 13, backgroundColor: colors.white, paddingHorizontal: 15, color: colors.ink, fontSize: 15, marginBottom: 16 },
   optionalHint: { color: colors.muted, fontSize: 12, lineHeight: 18, marginBottom: 20 },
+  photoButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 16 },
+  photoThumbnail: { width: 32, height: 32, borderRadius: 8 },
+  photoButtonText: { color: colors.plum, fontSize: 14, fontWeight: '600' },
+  alertRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  alertHint: { color: colors.muted, fontSize: 12, maxWidth: 220 },
   saveButton: { height: 52, borderRadius: 15, backgroundColor: colors.plum, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   saveButtonDisabled: { opacity: 0.45 },
   saveButtonText: { color: colors.cream, fontSize: 15, fontWeight: '700' },
+  allListSafeArea: { flex: 1, backgroundColor: colors.cream },
+  allListHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 22, paddingTop: 16, marginBottom: 16 },
+  allListContent: { paddingHorizontal: 22, paddingBottom: 40 },
 });

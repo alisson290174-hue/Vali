@@ -1,5 +1,5 @@
 import { getDatabase } from './database';
-import type { Item, NewItemInput } from './types';
+import type { Item, ItemStatus, NewItemInput } from './types';
 
 type ItemRow = {
   id: string;
@@ -25,7 +25,7 @@ function generateId(): string {
 
 export async function listItems(): Promise<Item[]> {
   const db = await getDatabase();
-  const rows = await db.getAllAsync<ItemRow>('SELECT * FROM items ORDER BY expiryDate ASC');
+  const rows = await db.getAllAsync<ItemRow>('SELECT * FROM items ORDER BY createdAt DESC');
   return rows.map(mapRow);
 }
 
@@ -62,6 +62,57 @@ export async function insertItem(input: NewItemInput): Promise<Item> {
     ]
   );
   return mapRow(row);
+}
+
+async function getItemById(id: string): Promise<Item | null> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<ItemRow>('SELECT * FROM items WHERE id = ?', [id]);
+  return row ? mapRow(row) : null;
+}
+
+export async function updateItem(
+  id: string,
+  patch: Partial<NewItemInput> & { status?: ItemStatus }
+): Promise<Item> {
+  const db = await getDatabase();
+  const existing = await getItemById(id);
+  if (!existing) throw new Error(`Item ${id} não encontrado`);
+
+  const updated: Item = {
+    ...existing,
+    item: patch.item ?? existing.item,
+    expiryDate: patch.expiryDate ?? existing.expiryDate,
+    store: patch.store !== undefined ? patch.store ?? null : existing.store,
+    photoUri: patch.photoUri !== undefined ? patch.photoUri ?? null : existing.photoUri,
+    quantity: patch.quantity !== undefined ? patch.quantity ?? null : existing.quantity,
+    brand: patch.brand !== undefined ? patch.brand ?? null : existing.brand,
+    note: patch.note !== undefined ? patch.note ?? null : existing.note,
+    alertEnabled: patch.alertEnabled ?? existing.alertEnabled,
+    status: patch.status ?? existing.status,
+  };
+
+  await db.runAsync(
+    `UPDATE items SET item = ?, expiryDate = ?, store = ?, photoUri = ?, quantity = ?, brand = ?, note = ?, alertEnabled = ?, status = ?
+     WHERE id = ?`,
+    [
+      updated.item,
+      updated.expiryDate,
+      updated.store,
+      updated.photoUri,
+      updated.quantity,
+      updated.brand,
+      updated.note,
+      updated.alertEnabled ? 1 : 0,
+      updated.status,
+      id,
+    ]
+  );
+  return updated;
+}
+
+export async function deleteItem(id: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync('DELETE FROM items WHERE id = ?', [id]);
 }
 
 const SEED_ITEMS: NewItemInput[] = [
