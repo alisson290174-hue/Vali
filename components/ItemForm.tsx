@@ -1,6 +1,7 @@
-import { Camera } from 'lucide-react-native';
+import { Camera, Expand, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDateInput } from '../lib/records';
 import { colors } from '../lib/theme';
 
@@ -50,6 +51,7 @@ export function ItemForm({
   autoFocusItem,
 }: ItemFormProps) {
   const [reminderText, setReminderText] = useState(reminderDaysBefore ? String(reminderDaysBefore) : '');
+  const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
 
   useEffect(() => {
     setReminderText(reminderDaysBefore ? String(reminderDaysBefore) : '');
@@ -81,14 +83,26 @@ export function ItemForm({
       <Text style={styles.inputLabel}>Observação (opcional)</Text>
       <TextInput value={note} onChangeText={onChangeNote} placeholder="Ex.: Conferir prateleira 3" placeholderTextColor={colors.muted} style={styles.input} multiline />
 
-      <Pressable style={styles.photoButton} onPress={onPickPhoto}>
-        {photoUri ? (
+      {photoUri && (
+        <Pressable style={styles.photoPreviewButton} onPress={() => setIsPhotoViewerOpen(true)}>
           <Image source={{ uri: photoUri }} style={styles.photoThumbnail} />
-        ) : (
-          <Camera size={20} color={colors.plum} />
-        )}
+          <Text style={styles.photoButtonText}>Ver foto em tela cheia</Text>
+          <Expand size={16} color={colors.plum} />
+        </Pressable>
+      )}
+      <Pressable style={styles.photoButton} onPress={onPickPhoto}>
+        <Camera size={20} color={colors.plum} />
         <Text style={styles.photoButtonText}>{photoUri ? 'Trocar foto (opcional)' : 'Adicionar foto (opcional)'}</Text>
       </Pressable>
+
+      <Modal visible={isPhotoViewerOpen} transparent animationType="fade" onRequestClose={() => setIsPhotoViewerOpen(false)}>
+        <SafeAreaView style={styles.photoViewerBackdrop}>
+          <Pressable style={styles.photoViewerClose} onPress={() => setIsPhotoViewerOpen(false)}>
+            <X size={24} color={colors.white} />
+          </Pressable>
+          {photoUri && <Image source={{ uri: photoUri }} style={styles.photoViewerImage} resizeMode="contain" />}
+        </SafeAreaView>
+      </Modal>
 
       <View style={styles.alertRow}>
         <View>
@@ -141,8 +155,12 @@ const styles = StyleSheet.create({
   inputLabel: { color: colors.ink, fontSize: 12, fontWeight: '700', marginBottom: 7 },
   input: { height: 50, borderRadius: 13, backgroundColor: colors.white, paddingHorizontal: 15, color: colors.ink, fontSize: 15, marginBottom: 16 },
   photoButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 16 },
+  photoPreviewButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 10 },
   photoThumbnail: { width: 32, height: 32, borderRadius: 8 },
-  photoButtonText: { color: colors.plum, fontSize: 14, fontWeight: '600' },
+  photoButtonText: { flex: 1, color: colors.plum, fontSize: 14, fontWeight: '600' },
+  photoViewerBackdrop: { flex: 1, backgroundColor: 'rgba(12, 10, 14, 0.95)' },
+  photoViewerImage: { flex: 1, width: '100%' },
+  photoViewerClose: { alignSelf: 'flex-end', margin: 16, backgroundColor: 'rgba(255,255,255,0.15)', padding: 10, borderRadius: 20 },
   alertRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   alertHint: { color: colors.muted, fontSize: 12, maxWidth: 220 },
   reminderBlock: { marginTop: -8, marginBottom: 20 },

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Store } from 'lucide-react-native';
 import type { Item } from '../db/types';
 import { colors } from '../lib/theme';
@@ -15,7 +15,11 @@ export function ExpiryRow({ record }: { record: Item }) {
   return (
     <Pressable style={styles.recordRow} onPress={() => router.push(`/item/${record.id}`)}>
       <View style={[styles.recordImage, isUrgent && styles.recordImageUrgent]}>
-        <Text style={styles.recordImageText}>{record.item.charAt(0)}</Text>
+        {record.photoUri ? (
+          <Image source={{ uri: record.photoUri }} style={styles.recordPhoto} />
+        ) : (
+          <Text style={styles.recordImageText}>{record.item.charAt(0)}</Text>
+        )}
       </View>
       <View style={styles.recordMain}>
         <Text style={styles.recordName} numberOfLines={1}>{record.item}</Text>
@@ -43,9 +47,10 @@ export function ExpiryRow({ record }: { record: Item }) {
 
 const styles = StyleSheet.create({
   recordRow: { backgroundColor: colors.white, borderRadius: 17, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
-  recordImage: { width: 52, height: 58, borderRadius: 13, backgroundColor: colors.oliveWash, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  recordImage: { width: 52, height: 58, borderRadius: 13, backgroundColor: colors.oliveWash, justifyContent: 'center', alignItems: 'center', marginRight: 12, overflow: 'hidden' },
   recordImageUrgent: { backgroundColor: colors.orangeWash },
   recordImageText: { color: colors.olive, fontSize: 21, fontWeight: '700' },
+  recordPhoto: { width: '100%', height: '100%' },
   recordMain: { flex: 1, minWidth: 0 },
   recordName: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 5 },
   storeLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 7 },
