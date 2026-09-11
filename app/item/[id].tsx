@@ -8,6 +8,7 @@ import { deleteItem, getItem, updateItem } from '../../db/items';
 import type { ItemStatus } from '../../db/types';
 import { cancelReminder, syncRemindersForItem } from '../../lib/notifications';
 import { pickPhoto } from '../../lib/photo';
+import { isValidExpiryDate } from '../../lib/records';
 import { STATUS_META } from '../../lib/status';
 import { colors } from '../../lib/theme';
 
@@ -85,13 +86,15 @@ export default function ItemDetailScreen() {
     if (value && reminderDaysBefore === null) setReminderDaysBefore(3);
   }
 
+  const canSave = itemName.trim().length > 0 && isValidExpiryDate(expiryDate);
+
   async function handlePickPhoto() {
     const uri = await pickPhoto();
     if (uri) setPhotoUri(uri);
   }
 
   async function handleSave() {
-    if (!itemName.trim() || !expiryDate.trim()) return;
+    if (!canSave) return;
     const updated = await updateItem(id, {
       item: itemName.trim(),
       expiryDate: expiryDate.trim(),
@@ -142,7 +145,7 @@ export default function ItemDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <Text style={styles.loadingText}>Esse item não existe mais (já foi excluído).</Text>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <Pressable style={styles.backButton} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Voltar">
           <Text style={styles.backButtonText}>Voltar</Text>
         </Pressable>
       </SafeAreaView>
@@ -187,6 +190,9 @@ export default function ItemDetailScreen() {
                   key={option}
                   onPress={() => handleStatusChange(option)}
                   style={[styles.statusChip, isActive && { backgroundColor: meta.bg }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Status: ${option}`}
+                  accessibilityState={{ selected: isActive }}
                 >
                   <StatusIcon status={option} size={14} color={isActive ? meta.text : colors.muted} />
                   <Text style={[styles.statusChipText, isActive && { color: meta.text }]}>{option}</Text>
@@ -196,14 +202,17 @@ export default function ItemDetailScreen() {
           </View>
 
           <Pressable
-            style={[styles.saveButton, (!itemName.trim() || !expiryDate.trim()) && styles.saveButtonDisabled]}
+            style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
             onPress={handleSave}
-            disabled={!itemName.trim() || !expiryDate.trim()}
+            disabled={!canSave}
+            accessibilityRole="button"
+            accessibilityLabel="Salvar alterações"
+            accessibilityState={{ disabled: !canSave }}
           >
             <Text style={styles.saveButtonText}>Salvar alterações</Text>
           </Pressable>
 
-          <Pressable style={styles.deleteButton} onPress={handleDelete}>
+          <Pressable style={styles.deleteButton} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Excluir item">
             <Text style={styles.deleteButtonText}>Excluir item</Text>
           </Pressable>
         </ScrollView>

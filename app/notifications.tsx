@@ -3,7 +3,7 @@ import { ptBR } from 'date-fns/locale';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Bell, ChevronRight, Clock3 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listItems } from '../db/items';
 import type { Item } from '../db/types';
@@ -16,26 +16,30 @@ type ReminderRow = {
   kind: 'early' | 'final' | null;
 };
 
+function buildRows(items: Item[]): ReminderRow[] {
+  const withAlert = items.filter((item) => item.alertEnabled);
+  const rows = withAlert.map((item) => {
+    const next = getNextReminder(item);
+    return { item, date: next?.date ?? null, kind: next?.kind ?? null };
+  });
+  rows.sort((a, b) => {
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date.getTime() - b.date.getTime();
+  });
+  return rows;
+}
+
 export default function NotificationsScreen() {
   const router = useRouter();
   const [rows, setRows] = useState<ReminderRow[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
       listItems().then((items) => {
-        if (!isMounted) return;
-        const withAlert = items.filter((item) => item.alertEnabled);
-        const withReminders = withAlert.map((item) => {
-          const next = getNextReminder(item);
-          return { item, date: next?.date ?? null, kind: next?.kind ?? null };
-        });
-        withReminders.sort((a, b) => {
-          if (!a.date) return 1;
-          if (!b.date) return -1;
-          return a.date.getTime() - b.date.getTime();
-        });
-        setRows(withReminders);
+        if (isMounted) setRows(buildRows(items));
       });
       return () => {
         isMounted = false;
@@ -43,14 +47,31 @@ export default function NotificationsScreen() {
     }, [])
   );
 
+  async function handleRefresh() {
+    setIsRefreshing(true);
+    const items = await listItems();
+    setRows(buildRows(items));
+    setIsRefreshing(false);
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <FlatList
         data={rows}
         keyExtractor={(row) => row.item.id}
         contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.plum} />}
         renderItem={({ item: row }) => (
-          <Pressable style={styles.row} onPress={() => router.push(`/item/${row.item.id}`)}>
+          <Pressable
+            style={styles.row}
+            onPress={() => router.push(`/item/${row.item.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`${row.item.item}. ${
+              row.date
+                ? `${row.kind === 'final' ? 'Último aviso' : 'Aviso antecipado'} em ${format(row.date, "dd/MM 'às' HH:mm", { locale: ptBR })}`
+                : 'Nenhum lembrete futuro agendado'
+            }. Toque para ver detalhes.`}
+          >
             <View style={styles.rowIcon}>
               <Bell size={18} color={colors.plum} />
             </View>

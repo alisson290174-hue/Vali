@@ -12,8 +12,16 @@ export function ExpiryRow({ record }: { record: Item }) {
   const days = daysUntil(record.expiryDate);
   const isUrgent = days <= 3;
   const statusMeta = STATUS_META[record.status];
+  const label = `${record.item}, ${urgencyLabel(days)}, vence em ${record.expiryDate}${
+    record.status !== 'Pendente' ? `, status ${record.status}` : ''
+  }. Toque para ver detalhes.`;
   return (
-    <Pressable style={styles.recordRow} onPress={() => router.push(`/item/${record.id}`)}>
+    <Pressable
+      style={styles.recordRow}
+      onPress={() => router.push(`/item/${record.id}`)}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <View style={[styles.recordImage, isUrgent && styles.recordImageUrgent]}>
         {record.photoUri ? (
           <Image source={{ uri: record.photoUri }} style={styles.recordPhoto} />

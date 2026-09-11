@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Text } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExpiryRow } from '../components/ExpiryRow';
 import { listItems } from '../db/items';
@@ -11,6 +11,7 @@ import { colors } from '../lib/theme';
 export default function AllItemsScreen() {
   const { filter } = useLocalSearchParams<{ filter?: string }>();
   const [records, setRecords] = useState<Item[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -24,6 +25,13 @@ export default function AllItemsScreen() {
     }, [])
   );
 
+  async function handleRefresh() {
+    setIsRefreshing(true);
+    const items = await listItems();
+    setRecords(items);
+    setIsRefreshing(false);
+  }
+
   const sorted = sortByUrgency(filterByCriteria(records, filter));
 
   return (
@@ -33,6 +41,7 @@ export default function AllItemsScreen() {
         keyExtractor={(record) => record.id}
         renderItem={({ item }) => <ExpiryRow record={item} />}
         contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.plum} />}
         ListEmptyComponent={<Text style={styles.emptyText}>Nenhum item encontrado.</Text>}
       />
     </SafeAreaView>

@@ -12,9 +12,29 @@ export function urgencyLabel(days: number): string {
   return 'No prazo';
 }
 
-export function formatDateInput(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
-  return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join('/');
+/**
+ * Formata dígitos brutos de data como DD/MM/AAAA. `expandYear` só deve ser `true`
+ * quando o usuário está digitando pra frente (adicionando dígitos) — nesse caso,
+ * um ano de 2 dígitos vira 20XX assim que completa. Ao apagar (editando uma data
+ * já existente), passar `false` evita reinterpretar os 2 dígitos restantes do ano
+ * como se fossem um ano novo sendo digitado.
+ */
+export function formatDateDigits(digits: string, expandYear: boolean): string {
+  const day = digits.slice(0, 2);
+  const month = digits.slice(2, 4);
+  const yearDigits = digits.slice(4, 8);
+  const year = expandYear && yearDigits.length === 2 ? `20${yearDigits}` : yearDigits;
+  return [day, month, year].filter(Boolean).join('/');
+}
+
+export function isValidExpiryDate(value: string): boolean {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (!match) return false;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
 export function sortByUrgency(records: Item[]): Item[] {

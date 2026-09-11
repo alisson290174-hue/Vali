@@ -18,6 +18,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,7 +30,7 @@ import { ItemForm } from '../components/ItemForm';
 import { insertItem, listItems, seedIfEmpty } from '../db/items';
 import type { Item } from '../db/types';
 import { colors } from '../lib/theme';
-import { countDistinctStores, daysUntil, filterByCriteria, sortByUrgency } from '../lib/records';
+import { countDistinctStores, daysUntil, filterByCriteria, isValidExpiryDate, sortByUrgency } from '../lib/records';
 import { pickPhoto } from '../lib/photo';
 import { getNextReminder, syncRemindersForItem } from '../lib/notifications';
 
@@ -53,10 +54,23 @@ export default function IndexScreen() {
   const [reminderDaysBefore, setReminderDaysBefore] = useState<number | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [records, setRecords] = useState<Item[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   function handleAlertToggle(value: boolean) {
     setAlertEnabled(value);
     if (value && reminderDaysBefore === null) setReminderDaysBefore(3);
+  }
+
+  async function loadRecords() {
+    await seedIfEmpty();
+    const items = await listItems();
+    setRecords(items);
+  }
+
+  async function handleRefresh() {
+    setIsRefreshing(true);
+    await loadRecords();
+    setIsRefreshing(false);
   }
 
   useFocusEffect(
@@ -84,8 +98,10 @@ export default function IndexScreen() {
   const urgentStoreCount = countDistinctStores(urgentRecords);
   const hasUpcomingReminder = records.some((record) => record.alertEnabled && getNextReminder(record) !== null);
 
+  const canSave = itemName.trim().length > 0 && isValidExpiryDate(expiryDate);
+
   async function addRecord() {
-    if (!itemName.trim() || !expiryDate.trim()) return;
+    if (!canSave) return;
     const created = await insertItem({
       item: itemName.trim(),
       expiryDate: expiryDate.trim(),
@@ -129,19 +145,28 @@ export default function IndexScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.plum} />}
+      >
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>BOM DIA, PROMOTOR</Text>
             <Text style={styles.title}>Sua validade{`\n`}sob controle.</Text>
           </View>
-          <Pressable style={styles.bellButton} accessibilityLabel="Notificações" onPress={() => router.push('/notifications')}>
+          <Pressable style={styles.bellButton} accessibilityLabel="Notificações" accessibilityRole="button" onPress={() => router.push('/notifications')}>
             <Bell size={21} color={colors.plum} strokeWidth={2.2} />
             {hasUpcomingReminder && <View style={styles.notificationDot} />}
           </Pressable>
         </View>
 
-        <Pressable style={styles.summaryCard} onPress={() => router.push('/all-items?filter=Urgentes')}>
+        <Pressable
+          style={styles.summaryCard}
+          onPress={() => router.push('/all-items?filter=Urgentes')}
+          accessibilityRole="button"
+          accessibilityLabel={`Atenção hoje: ${urgentCount} ${urgentCount === 1 ? 'item urgente' : 'itens urgentes'}. Toque para ver a lista.`}
+        >
           <View style={styles.summaryOrb} />
           <View style={styles.summaryContent}>
             <Text style={styles.summaryLabel}>ATENÇÃO HOJE</Text>
@@ -167,7 +192,7 @@ export default function IndexScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Registros recentes</Text>
-          <Pressable onPress={() => router.push('/all-items')}>
+          <Pressable onPress={() => router.push('/all-items')} accessibilityRole="button" accessibilityLabel="Ver todos os itens">
             <Text style={styles.linkText}>Ver todos</Text>
           </Pressable>
         </View>
@@ -177,6 +202,9 @@ export default function IndexScreen() {
               key={filter}
               onPress={() => setActiveFilter(filter)}
               style={[styles.filter, activeFilter === filter && styles.filterActive]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === filter }}
+              accessibilityLabel={`Filtrar por ${filter}`}
             >
               <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>{filter}</Text>
             </Pressable>
@@ -192,7 +220,7 @@ export default function IndexScreen() {
         />
       </ScrollView>
 
-      <Pressable style={styles.fab} onPress={() => setIsAddOpen(true)} accessibilityLabel="Adicionar item">
+      <Pressable style={styles.fab} onPress={() => setIsAddOpen(true)} accessibilityLabel="Adicionar item" accessibilityRole="button">
         <Plus size={25} color={colors.cream} strokeWidth={2.5} />
         <Text style={styles.fabText}>Novo item</Text>
       </Pressable>
@@ -219,6 +247,8 @@ export default function IndexScreen() {
                   setIsAddOpen(false);
                 }}
                 style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel="Fechar"
               >
                 <X size={20} color={colors.ink} />
               </Pressable>
@@ -246,7 +276,14 @@ export default function IndexScreen() {
                 autoFocusItem
               />
             </ScrollView>
-            <Pressable style={[styles.saveButton, (!itemName.trim() || !expiryDate.trim()) && styles.saveButtonDisabled]} onPress={addRecord} disabled={!itemName.trim() || !expiryDate.trim()}>
+            <Pressable
+              style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+              onPress={addRecord}
+              disabled={!canSave}
+              accessibilityRole="button"
+              accessibilityLabel="Salvar item"
+              accessibilityState={{ disabled: !canSave }}
+            >
               <Text style={styles.saveButtonText}>Salvar item</Text>
               <ChevronRight size={19} color={colors.cream} />
             </Pressable>
@@ -271,7 +308,12 @@ function Metric({
   onPress: () => void;
 }) {
   return (
-    <Pressable style={styles.metric} onPress={onPress}>
+    <Pressable
+      style={styles.metric}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value}. Toque para ver a lista filtrada.`}
+    >
       <View style={[styles.metricIcon, { backgroundColor: colors[`${tone}Wash`] }]}>{icon}</View>
       <Text style={styles.metricValue}>{value}</Text>
       <Text style={styles.metricLabel}>{label}</Text>
