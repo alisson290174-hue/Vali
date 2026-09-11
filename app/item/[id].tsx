@@ -6,6 +6,7 @@ import { ItemForm } from '../../components/ItemForm';
 import { StatusIcon } from '../../components/StatusIcon';
 import { deleteItem, getItem, updateItem } from '../../db/items';
 import type { ItemStatus } from '../../db/types';
+import { cancelReminder, syncRemindersForItem } from '../../lib/notifications';
 import { pickPhoto } from '../../lib/photo';
 import { STATUS_META } from '../../lib/status';
 import { colors } from '../../lib/theme';
@@ -25,10 +26,12 @@ export default function ItemDetailScreen() {
   const [brand, setBrand] = useState('');
   const [note, setNote] = useState('');
   const [alertEnabled, setAlertEnabled] = useState(false);
+  const [reminderDaysBefore, setReminderDaysBefore] = useState<number | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [status, setStatus] = useState<ItemStatus>('Pendente');
   const [statusSavedHint, setStatusSavedHint] = useState(false);
   const statusHintTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notificationIdsRef = useRef<{ early: string | null; final: string | null }>({ early: null, final: null });
 
   useEffect(() => {
     return () => {
@@ -52,6 +55,8 @@ export default function ItemDetailScreen() {
       setBrand(found.brand ?? '');
       setNote(found.note ?? '');
       setAlertEnabled(found.alertEnabled);
+      setReminderDaysBefore(found.reminderDaysBefore);
+      notificationIdsRef.current = { early: found.earlyNotificationId, final: found.finalNotificationId };
       setPhotoUri(found.photoUri);
       setStatus(found.status);
       setIsLoading(false);
@@ -75,6 +80,11 @@ export default function ItemDetailScreen() {
     }
   }
 
+  function handleAlertToggle(value: boolean) {
+    setAlertEnabled(value);
+    if (value && reminderDaysBefore === null) setReminderDaysBefore(3);
+  }
+
   async function handlePickPhoto() {
     const uri = await pickPhoto();
     if (uri) setPhotoUri(uri);
@@ -82,7 +92,7 @@ export default function ItemDetailScreen() {
 
   async function handleSave() {
     if (!itemName.trim() || !expiryDate.trim()) return;
-    await updateItem(id, {
+    const updated = await updateItem(id, {
       item: itemName.trim(),
       expiryDate: expiryDate.trim(),
       store: store.trim() || undefined,
@@ -90,10 +100,18 @@ export default function ItemDetailScreen() {
       brand: brand.trim() || undefined,
       note: note.trim() || undefined,
       alertEnabled,
+      reminderDaysBefore: alertEnabled ? reminderDaysBefore ?? undefined : null,
       photoUri: photoUri ?? undefined,
       status,
     });
+    const { permissionDenied } = await syncRemindersForItem(updated);
     router.back();
+    if (permissionDenied) {
+      Alert.alert(
+        'Permissão de notificação negada',
+        'O item foi salvo com o alerta ligado, mas você não vai receber lembretes até permitir notificações para o Vali nas configurações do celular.'
+      );
+    }
   }
 
   function handleDelete() {
@@ -103,6 +121,8 @@ export default function ItemDetailScreen() {
         text: 'Excluir',
         style: 'destructive',
         onPress: async () => {
+          await cancelReminder(notificationIdsRef.current.early);
+          await cancelReminder(notificationIdsRef.current.final);
           await deleteItem(id);
           router.back();
         },
@@ -147,7 +167,9 @@ export default function ItemDetailScreen() {
             note={note}
             onChangeNote={setNote}
             alertEnabled={alertEnabled}
-            onChangeAlertEnabled={setAlertEnabled}
+            onChangeAlertEnabled={handleAlertToggle}
+            reminderDaysBefore={reminderDaysBefore}
+            onChangeReminderDaysBefore={setReminderDaysBefore}
             photoUri={photoUri}
             onPickPhoto={handlePickPhoto}
           />

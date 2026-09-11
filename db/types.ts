@@ -12,6 +12,9 @@ export type Item = {
   alertEnabled: boolean;
   status: ItemStatus;
   createdAt: string;
+  reminderDaysBefore: number | null;
+  earlyNotificationId: string | null;
+  finalNotificationId: string | null;
 };
 
 export type NewItemInput = {
@@ -23,4 +26,7 @@ export type NewItemInput = {
   brand?: string;
   note?: string;
   alertEnabled?: boolean;
+  reminderDaysBefore?: number | null;
+  earlyNotificationId?: string | null;
+  finalNotificationId?: string | null;
 };

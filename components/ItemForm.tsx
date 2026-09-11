@@ -1,7 +1,10 @@
 import { Camera } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { formatDateInput } from '../lib/records';
 import { colors } from '../lib/theme';
+
+const REMINDER_SHORTCUTS = [1, 3, 5, 7];
 
 type ItemFormProps = {
   itemName: string;
@@ -18,6 +21,8 @@ type ItemFormProps = {
   onChangeNote: (value: string) => void;
   alertEnabled: boolean;
   onChangeAlertEnabled: (value: boolean) => void;
+  reminderDaysBefore: number | null;
+  onChangeReminderDaysBefore: (value: number) => void;
   photoUri: string | null;
   onPickPhoto: () => void;
   autoFocusItem?: boolean;
@@ -38,10 +43,25 @@ export function ItemForm({
   onChangeNote,
   alertEnabled,
   onChangeAlertEnabled,
+  reminderDaysBefore,
+  onChangeReminderDaysBefore,
   photoUri,
   onPickPhoto,
   autoFocusItem,
 }: ItemFormProps) {
+  const [reminderText, setReminderText] = useState(reminderDaysBefore ? String(reminderDaysBefore) : '');
+
+  useEffect(() => {
+    setReminderText(reminderDaysBefore ? String(reminderDaysBefore) : '');
+  }, [reminderDaysBefore]);
+
+  function handleReminderTextChange(text: string) {
+    const digits = text.replace(/\D/g, '').slice(0, 2);
+    setReminderText(digits);
+    if (digits) {
+      onChangeReminderDaysBefore(Math.max(1, parseInt(digits, 10)));
+    }
+  }
   return (
     <View>
       <Text style={styles.inputLabel}>Item</Text>
@@ -82,6 +102,37 @@ export function ItemForm({
           thumbColor={colors.white}
         />
       </View>
+
+      {alertEnabled && (
+        <View style={styles.reminderBlock}>
+          <Text style={styles.inputLabel}>Avisar com quantos dias de antecedência</Text>
+          <View style={styles.reminderChipRow}>
+            {REMINDER_SHORTCUTS.map((days) => (
+              <Pressable
+                key={days}
+                onPress={() => onChangeReminderDaysBefore(days)}
+                style={[styles.reminderChip, reminderDaysBefore === days && styles.reminderChipActive]}
+              >
+                <Text style={[styles.reminderChipText, reminderDaysBefore === days && styles.reminderChipTextActive]}>
+                  {days} {days === 1 ? 'dia' : 'dias'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <TextInput
+            value={reminderText}
+            onChangeText={handleReminderTextChange}
+            placeholder="Ou digite outro número de dias"
+            placeholderTextColor={colors.muted}
+            style={styles.input}
+            keyboardType="number-pad"
+            maxLength={2}
+          />
+          <Text style={styles.reminderHint}>
+            Além disso, um último aviso sempre chega no dia do vencimento.
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -94,4 +145,11 @@ const styles = StyleSheet.create({
   photoButtonText: { color: colors.plum, fontSize: 14, fontWeight: '600' },
   alertRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   alertHint: { color: colors.muted, fontSize: 12, maxWidth: 220 },
+  reminderBlock: { marginTop: -8, marginBottom: 20 },
+  reminderChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  reminderChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: colors.white },
+  reminderChipActive: { backgroundColor: colors.olive },
+  reminderChipText: { color: colors.muted, fontSize: 12, fontWeight: '600' },
+  reminderChipTextActive: { color: colors.cream },
+  reminderHint: { color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: -8 },
 });

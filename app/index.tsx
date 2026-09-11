@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react-native';
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -30,6 +31,7 @@ import type { Item } from '../db/types';
 import { colors } from '../lib/theme';
 import { countDistinctStores, daysUntil, filterByCriteria, sortByUrgency } from '../lib/records';
 import { pickPhoto } from '../lib/photo';
+import { syncRemindersForItem } from '../lib/notifications';
 
 function pad2(value: number): string {
   return String(value).padStart(2, '0');
@@ -48,8 +50,14 @@ export default function IndexScreen() {
   const [brand, setBrand] = useState('');
   const [note, setNote] = useState('');
   const [alertEnabled, setAlertEnabled] = useState(false);
+  const [reminderDaysBefore, setReminderDaysBefore] = useState<number | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [records, setRecords] = useState<Item[]>([]);
+
+  function handleAlertToggle(value: boolean) {
+    setAlertEnabled(value);
+    if (value && reminderDaysBefore === null) setReminderDaysBefore(3);
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -85,11 +93,19 @@ export default function IndexScreen() {
       brand: brand.trim() || undefined,
       note: note.trim() || undefined,
       alertEnabled,
+      reminderDaysBefore: alertEnabled ? reminderDaysBefore ?? undefined : undefined,
       photoUri: photoUri ?? undefined,
     });
-    setRecords((current) => [created, ...current]);
+    const { item: withReminders, permissionDenied } = await syncRemindersForItem(created);
+    setRecords((current) => [withReminders, ...current]);
     resetForm();
     setIsAddOpen(false);
+    if (permissionDenied) {
+      Alert.alert(
+        'Permissão de notificação negada',
+        'O item foi salvo com o alerta ligado, mas você não vai receber lembretes até permitir notificações para o Vali nas configurações do celular.'
+      );
+    }
   }
 
   function resetForm() {
@@ -98,6 +114,7 @@ export default function IndexScreen() {
     setStore('');
     setQuantity('');
     setBrand('');
+    setReminderDaysBefore(null);
     setNote('');
     setAlertEnabled(false);
     setPhotoUri(null);
@@ -220,7 +237,9 @@ export default function IndexScreen() {
                 note={note}
                 onChangeNote={setNote}
                 alertEnabled={alertEnabled}
-                onChangeAlertEnabled={setAlertEnabled}
+                onChangeAlertEnabled={handleAlertToggle}
+                reminderDaysBefore={reminderDaysBefore}
+                onChangeReminderDaysBefore={setReminderDaysBefore}
                 photoUri={photoUri}
                 onPickPhoto={handlePickPhoto}
                 autoFocusItem

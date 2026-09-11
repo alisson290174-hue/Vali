@@ -11,6 +11,19 @@ export function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   return dbPromise;
 }
 
+async function ensureColumn(
+  db: SQLite.SQLiteDatabase,
+  table: string,
+  column: string,
+  definition: string
+): Promise<void> {
+  const existingColumns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+  const hasColumn = existingColumns.some((col) => col.name === column);
+  if (!hasColumn) {
+    await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
+  }
+}
+
 async function openDatabaseAndMigrate(): Promise<SQLite.SQLiteDatabase> {
   const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
   await db.execAsync(`
@@ -28,5 +41,8 @@ async function openDatabaseAndMigrate(): Promise<SQLite.SQLiteDatabase> {
       createdAt TEXT NOT NULL
     );
   `);
+  await ensureColumn(db, 'items', 'reminderDaysBefore', 'INTEGER');
+  await ensureColumn(db, 'items', 'earlyNotificationId', 'TEXT');
+  await ensureColumn(db, 'items', 'finalNotificationId', 'TEXT');
   return db;
 }

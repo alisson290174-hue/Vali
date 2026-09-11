@@ -29,6 +29,12 @@
         {
           "photosPermission": "O Vali usa suas fotos para anexar uma imagem ao item cadastrado."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#4C2B52"
+        }
       ]
     ]
   }

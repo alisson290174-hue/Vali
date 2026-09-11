@@ -1,8 +1,12 @@
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../lib/theme';
+import { configureNotificationHandler, useNotificationDeepLink } from '../lib/notifications';
+
+configureNotificationHandler();
 
 export default function RootLayout() {
+  useNotificationDeepLink();
   return (
     <SafeAreaProvider>
       <Stack screenOptions={{ headerShown: false }}>

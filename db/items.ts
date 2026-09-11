@@ -14,6 +14,9 @@ type ItemRow = {
   alertEnabled: number;
   status: Item['status'];
   createdAt: string;
+  reminderDaysBefore: number | null;
+  earlyNotificationId: string | null;
+  finalNotificationId: string | null;
 };
 
 function mapRow(row: ItemRow): Item {
@@ -55,10 +58,13 @@ export async function insertItem(input: NewItemInput): Promise<Item> {
     alertEnabled: input.alertEnabled ? 1 : 0,
     status: 'Pendente',
     createdAt: new Date().toISOString(),
+    reminderDaysBefore: input.reminderDaysBefore ?? null,
+    earlyNotificationId: input.earlyNotificationId ?? null,
+    finalNotificationId: input.finalNotificationId ?? null,
   };
   await db.runAsync(
-    `INSERT INTO items (id, item, expiryDate, store, photoUri, quantity, brand, note, alertEnabled, status, createdAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO items (id, item, expiryDate, store, photoUri, quantity, brand, note, alertEnabled, status, createdAt, reminderDaysBefore, earlyNotificationId, finalNotificationId)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id,
       row.item,
@@ -71,6 +77,9 @@ export async function insertItem(input: NewItemInput): Promise<Item> {
       row.alertEnabled,
       row.status,
       row.createdAt,
+      row.reminderDaysBefore,
+      row.earlyNotificationId,
+      row.finalNotificationId,
     ]
   );
   return mapRow(row);
@@ -102,10 +111,13 @@ export async function updateItem(
     note: patch.note !== undefined ? patch.note ?? null : existing.note,
     alertEnabled: patch.alertEnabled ?? existing.alertEnabled,
     status: patch.status ?? existing.status,
+    reminderDaysBefore: patch.reminderDaysBefore !== undefined ? patch.reminderDaysBefore ?? null : existing.reminderDaysBefore,
+    earlyNotificationId: patch.earlyNotificationId !== undefined ? patch.earlyNotificationId : existing.earlyNotificationId,
+    finalNotificationId: patch.finalNotificationId !== undefined ? patch.finalNotificationId : existing.finalNotificationId,
   };
 
   await db.runAsync(
-    `UPDATE items SET item = ?, expiryDate = ?, store = ?, photoUri = ?, quantity = ?, brand = ?, note = ?, alertEnabled = ?, status = ?
+    `UPDATE items SET item = ?, expiryDate = ?, store = ?, photoUri = ?, quantity = ?, brand = ?, note = ?, alertEnabled = ?, status = ?, reminderDaysBefore = ?, earlyNotificationId = ?, finalNotificationId = ?
      WHERE id = ?`,
     [
       updated.item,
@@ -117,6 +129,9 @@ export async function updateItem(
       updated.note,
       updated.alertEnabled ? 1 : 0,
       updated.status,
+      updated.reminderDaysBefore,
+      updated.earlyNotificationId,
+      updated.finalNotificationId,
       id,
     ]
   );
