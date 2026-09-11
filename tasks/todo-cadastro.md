@@ -82,43 +82,43 @@ Ver plano completo em [plan-cadastro.md](plan-cadastro.md). Continuação de [to
 
 ### Task 4: Modal de detalhes do item
 
-**Description:** Tocar numa linha da lista abre um modal de detalhes com os campos pré-preenchidos (reaproveitando os inputs do cadastro).
+**Description:** ~~Tocar numa linha da lista abre um modal de detalhes~~ **[ATUALIZADO]** Tocar numa linha da lista abre a rota `app/item/[id].tsx` (ver [plan-router.md](plan-router.md) — projeto migrou de modais pra Expo Router), com os campos pré-preenchidos reaproveitando o `ItemForm` do cadastro.
 
 **Acceptance criteria:**
-- [ ] `ExpiryRow` fica tocável (`Pressable`) e abre o modal de detalhes com os dados do item selecionado
-- [ ] Modal mostra todos os campos (obrigatórios e opcionais) já preenchidos
-- [ ] Fechar o modal sem salvar não altera nada no banco
+- [x] `ExpiryRow` fica tocável (`Pressable`) e navega pra `/item/[id]` com os dados do item selecionado
+- [x] Tela mostra todos os campos (obrigatórios e opcionais) já preenchidos
+- [x] Voltar sem salvar não altera nada no banco
 
 **Verification:**
-- [ ] `npx tsc --noEmit`
-- [ ] Manual: tocar em um item da lista e ver o modal abrir com os dados corretos
+- [x] `npx tsc --noEmit`
+- [x] Manual: tocar em um item da lista e ver a tela abrir com os dados corretos
 
 **Dependencies:** Task 3
 
 **Files likely touched:**
-- `App.tsx`
+- `app/item/[id].tsx`, `components/ItemForm.tsx`, `components/ExpiryRow.tsx`
 
-**Estimated scope:** Medium: 1 file (bloco grande de JSX)
+**Estimated scope:** Medium: vários arquivos pequenos
 
 ---
 
 ### Task 5: Salvar edição
 
-**Description:** Botão "Salvar alterações" no modal de detalhes chama `updateItem` e atualiza a lista local.
+**Description:** Botão "Salvar alterações" na tela de detalhes chama `updateItem` e volta pra tela anterior.
 
 **Acceptance criteria:**
-- [ ] Editar qualquer campo e salvar atualiza o registro no banco
-- [ ] Lista reflete a mudança sem precisar reabrir o app
-- [ ] Item continua exigindo `item` e `expiryDate` preenchidos pra salvar
+- [x] Editar qualquer campo e salvar atualiza o registro no banco
+- [x] Voltar pra lista reflete a mudança (recarrega ao montar a tela)
+- [x] Item continua exigindo `item` e `expiryDate` preenchidos pra salvar
 
 **Verification:**
-- [ ] `npx tsc --noEmit`
-- [ ] Manual: editar um item, salvar, fechar/reabrir o app, confirmar que a mudança persistiu
+- [x] `npx tsc --noEmit`
+- [x] Manual: editar um item, salvar, fechar/reabrir o app, confirmar que a mudança persistiu
 
 **Dependencies:** Task 4
 
 **Files likely touched:**
-- `App.tsx`
+- `app/item/[id].tsx`, `db/items.ts`
 
 **Estimated scope:** Small: 1 file
 
@@ -126,55 +126,55 @@ Ver plano completo em [plan-cadastro.md](plan-cadastro.md). Continuação de [to
 
 ### Task 6: Excluir item
 
-**Description:** Botão "Excluir" no modal de detalhes, com confirmação (`Alert.alert`) antes de chamar `deleteItem`.
+**Description:** Botão "Excluir" na tela de detalhes, com confirmação (`Alert.alert`) antes de chamar `deleteItem`.
 
 **Acceptance criteria:**
-- [ ] Excluir pede confirmação antes de apagar
-- [ ] Confirmando, o item some da lista e do banco (some mesmo após fechar/reabrir o app)
-- [ ] Cancelar a confirmação não altera nada
+- [x] Excluir pede confirmação antes de apagar
+- [x] Confirmando, o item some da lista e do banco (some mesmo após fechar/reabrir o app)
+- [x] Cancelar a confirmação não altera nada
 
 **Verification:**
-- [ ] `npx tsc --noEmit`
-- [ ] Manual: excluir um item e confirmar que não volta após reabrir o app
+- [x] `npx tsc --noEmit`
+- [x] Manual: excluir um item e confirmar que não volta após reabrir o app
 
 **Dependencies:** Task 5
 
 **Files likely touched:**
-- `App.tsx`
+- `app/item/[id].tsx`
 
 **Estimated scope:** Small: 1 file
 
 ---
 
 ## Checkpoint: Editar e excluir
-- [ ] Manual: editar um item existente e confirmar que a mudança persiste; excluir um item e confirmar que ele some de vez
+- [x] Manual: editar um item existente e confirmar que a mudança persiste; excluir um item e confirmar que ele some de vez
 
 ## Phase 4: Status
 
-### Task 7: Seletor de status no modal de detalhes
+### Task 7: Seletor de status na tela de detalhes
 
-**Description:** Chips com as 5 opções de status (Pendente, Resolvido, Retirado, Trocado, Vencido) no modal de detalhes, cada toque grava via `updateItem`.
+**Description:** Chips com as 5 opções de status (Pendente, Resolvido, Retirado, Trocado, Vencido) na tela de detalhes. **[ATUALIZADO a pedido do usuário]** grava na hora ao tocar (não depende mais do botão "Salvar alterações"), com cor/ícone por status e confirmação visual — ver [[03 - Decisoes/Registro de decisoes]].
 
 **Acceptance criteria:**
-- [ ] Chip do status atual do item aparece selecionado ao abrir o modal
-- [ ] Tocar em outro chip atualiza o status no banco imediatamente (ou junto do "Salvar alterações", a definir na implementação)
-- [ ] Badge de urgência na lista continua calculada pela data, sem se misturar com o status
+- [x] Chip do status atual do item aparece selecionado ao abrir a tela
+- [x] Tocar em outro chip e salvar atualiza o status no banco
+- [x] Badge de urgência na lista continua calculada pela data, sem se misturar com o status
 
 **Verification:**
-- [ ] `npx tsc --noEmit`
-- [ ] Manual: mudar o status de um item e confirmar que persiste após reabrir o app
+- [x] `npx tsc --noEmit`
+- [ ] Manual: mudar o status de um item e confirmar que persiste após reabrir o app *(pendente)*
 
 **Dependencies:** Task 6
 
 **Files likely touched:**
-- `App.tsx`
+- `app/item/[id].tsx`
 
 **Estimated scope:** Small: 1 file
 
 ---
 
 ## Checkpoint: Complete
-- [ ] `npx tsc --noEmit` e `npx expo-doctor` limpos
-- [ ] Fluxo completo validado manualmente no Expo Go: cadastrar com campos opcionais → editar → mudar status → excluir
-- [ ] Vault Obsidian atualizado (diário + plano do MVP)
+- [x] `npx tsc --noEmit` e `npx expo-doctor` limpos
+- [ ] Fluxo completo validado manualmente no Expo Go: cadastrar com campos opcionais → editar → mudar status → excluir *(pendente)*
+- [ ] Vault Obsidian atualizado (diário + plano do MVP) *(pendente até validar manualmente)*
 - [ ] Review com o usuário antes de seguir para notificações locais

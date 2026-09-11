@@ -1,14 +1,19 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Store } from 'lucide-react-native';
 import type { Item } from '../db/types';
 import { colors } from '../lib/theme';
 import { daysUntil, urgencyLabel } from '../lib/records';
+import { STATUS_META } from '../lib/status';
+import { StatusIcon } from './StatusIcon';
 
 export function ExpiryRow({ record }: { record: Item }) {
+  const router = useRouter();
   const days = daysUntil(record.expiryDate);
   const isUrgent = days <= 3;
+  const statusMeta = STATUS_META[record.status];
   return (
-    <View style={styles.recordRow}>
+    <Pressable style={styles.recordRow} onPress={() => router.push(`/item/${record.id}`)}>
       <View style={[styles.recordImage, isUrgent && styles.recordImageUrgent]}>
         <Text style={styles.recordImageText}>{record.item.charAt(0)}</Text>
       </View>
@@ -19,6 +24,12 @@ export function ExpiryRow({ record }: { record: Item }) {
           <Text style={styles.storeText} numberOfLines={1}>{record.store ?? 'Sem loja definida'}</Text>
         </View>
         <Text style={styles.recordQuantity}>{record.quantity ?? 'Não informado'}</Text>
+        {record.status !== 'Pendente' && (
+          <View style={[styles.statusTag, { backgroundColor: statusMeta.bg }]}>
+            <StatusIcon status={record.status} size={11} color={statusMeta.text} />
+            <Text style={[styles.statusTagText, { color: statusMeta.text }]}>{record.status}</Text>
+          </View>
+        )}
       </View>
       <View style={styles.recordRight}>
         <View style={[styles.statusPill, isUrgent ? styles.statusUrgent : styles.statusNormal]}>
@@ -26,7 +37,7 @@ export function ExpiryRow({ record }: { record: Item }) {
         </View>
         <Text style={styles.recordDate}>{record.expiryDate}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -40,6 +51,8 @@ const styles = StyleSheet.create({
   storeLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 7 },
   storeText: { color: colors.muted, fontSize: 11, flexShrink: 1 },
   recordQuantity: { color: colors.olive, fontSize: 11, fontWeight: '700' },
+  statusTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 6, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 7 },
+  statusTagText: { fontSize: 10, fontWeight: '700' },
   recordRight: { alignItems: 'flex-end', marginLeft: 8 },
   statusPill: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, marginBottom: 8 },
   statusUrgent: { backgroundColor: colors.orangeWash },

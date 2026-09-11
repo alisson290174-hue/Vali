@@ -17,6 +17,17 @@ export default function RootLayout() {
             headerTitleStyle: { color: colors.ink },
           }}
         />
+        <Stack.Screen
+          name="item/[id]"
+          options={{
+            headerShown: true,
+            title: 'Detalhes do item',
+            headerBackTitle: 'Voltar',
+            headerStyle: { backgroundColor: colors.cream },
+            headerTintColor: colors.plum,
+            headerTitleStyle: { color: colors.ink },
+          }}
+        />
       </Stack>
     </SafeAreaProvider>
   );

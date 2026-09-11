@@ -1,5 +1,6 @@
 import { getDatabase } from './database';
 import type { Item, ItemStatus, NewItemInput } from './types';
+import { daysUntil } from '../lib/records';
 
 type ItemRow = {
   id: string;
@@ -23,8 +24,19 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+async function applyAutoExpiry(db: Awaited<ReturnType<typeof getDatabase>>): Promise<void> {
+  const pending = await db.getAllAsync<{ id: string; expiryDate: string }>(
+    "SELECT id, expiryDate FROM items WHERE status = 'Pendente'"
+  );
+  const overdueIds = pending.filter((row) => daysUntil(row.expiryDate) < 0).map((row) => row.id);
+  if (overdueIds.length === 0) return;
+  const placeholders = overdueIds.map(() => '?').join(', ');
+  await db.runAsync(`UPDATE items SET status = 'Vencido' WHERE id IN (${placeholders})`, overdueIds);
+}
+
 export async function listItems(): Promise<Item[]> {
   const db = await getDatabase();
+  await applyAutoExpiry(db);
   const rows = await db.getAllAsync<ItemRow>('SELECT * FROM items ORDER BY createdAt DESC');
   return rows.map(mapRow);
 }
@@ -64,8 +76,9 @@ export async function insertItem(input: NewItemInput): Promise<Item> {
   return mapRow(row);
 }
 
-async function getItemById(id: string): Promise<Item | null> {
+export async function getItem(id: string): Promise<Item | null> {
   const db = await getDatabase();
+  await applyAutoExpiry(db);
   const row = await db.getFirstAsync<ItemRow>('SELECT * FROM items WHERE id = ?', [id]);
   return row ? mapRow(row) : null;
 }
@@ -75,7 +88,7 @@ export async function updateItem(
   patch: Partial<NewItemInput> & { status?: ItemStatus }
 ): Promise<Item> {
   const db = await getDatabase();
-  const existing = await getItemById(id);
+  const existing = await getItem(id);
   if (!existing) throw new Error(`Item ${id} não encontrado`);
 
   const updated: Item = {

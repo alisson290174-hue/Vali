@@ -1,5 +1,5 @@
-import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExpiryRow } from '../components/ExpiryRow';
@@ -12,15 +12,17 @@ export default function AllItemsScreen() {
   const { filter } = useLocalSearchParams<{ filter?: string }>();
   const [records, setRecords] = useState<Item[]>([]);
 
-  useEffect(() => {
-    let isMounted = true;
-    listItems().then((items) => {
-      if (isMounted) setRecords(items);
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      listItems().then((items) => {
+        if (isMounted) setRecords(items);
+      });
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
 
   const sorted = sortByUrgency(filterByCriteria(records, filter));
 

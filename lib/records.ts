@@ -21,6 +21,13 @@ export function sortByUrgency(records: Item[]): Item[] {
   return [...records].sort((a, b) => daysUntil(a.expiryDate) - daysUntil(b.expiryDate));
 }
 
+export function countDistinctStores(records: Item[]): number {
+  const stores = records
+    .map((record) => record.store?.trim())
+    .filter((store): store is string => !!store);
+  return new Set(stores).size;
+}
+
 export function filterByCriteria(records: Item[], filter: string | undefined): Item[] {
   return records.filter((record) => {
     const days = daysUntil(record.expiryDate);

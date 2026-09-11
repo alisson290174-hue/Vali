@@ -1,11 +1,9 @@
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   AlertTriangle,
   Bell,
-  Camera,
   ChevronRight,
   CircleCheck,
   Clock3,
@@ -14,26 +12,28 @@ import {
   X,
 } from 'lucide-react-native';
 import {
-  Alert,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExpiryRow } from '../components/ExpiryRow';
+import { ItemForm } from '../components/ItemForm';
 import { insertItem, listItems, seedIfEmpty } from '../db/items';
 import type { Item } from '../db/types';
 import { colors } from '../lib/theme';
-import { filterByCriteria, formatDateInput, sortByUrgency } from '../lib/records';
+import { countDistinctStores, daysUntil, filterByCriteria, sortByUrgency } from '../lib/records';
+import { pickPhoto } from '../lib/photo';
+
+function pad2(value: number): string {
+  return String(value).padStart(2, '0');
+}
 
 const HOME_PREVIEW_LIMIT = 5;
 
@@ -51,21 +51,29 @@ export default function IndexScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [records, setRecords] = useState<Item[]>([]);
 
-  useEffect(() => {
-    let isMounted = true;
-    async function bootstrap() {
-      await seedIfEmpty();
-      const items = await listItems();
-      if (isMounted) setRecords(items);
-    }
-    bootstrap();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      async function bootstrap() {
+        await seedIfEmpty();
+        const items = await listItems();
+        if (isMounted) setRecords(items);
+      }
+      bootstrap();
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
 
   const visibleRecords = filterByCriteria(records, activeFilter);
   const homePreviewRecords = sortByUrgency(visibleRecords).slice(0, HOME_PREVIEW_LIMIT);
+
+  const urgentRecords = records.filter((record) => daysUntil(record.expiryDate) <= 3);
+  const urgentCount = urgentRecords.length;
+  const pendingCount = records.filter((record) => record.status === 'Pendente').length;
+  const storeCount = countDistinctStores(records);
+  const urgentStoreCount = countDistinctStores(urgentRecords);
 
   async function addRecord() {
     if (!itemName.trim() || !expiryDate.trim()) return;
@@ -95,19 +103,9 @@ export default function IndexScreen() {
     setPhotoUri(null);
   }
 
-  async function pickPhoto() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permissão necessária', 'Autorize o acesso às fotos para anexar uma imagem ao item.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.6,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      setPhotoUri(result.assets[0].uri);
-    }
+  async function handlePickPhoto() {
+    const uri = await pickPhoto();
+    if (uri) setPhotoUri(uri);
   }
 
   return (
@@ -129,20 +127,24 @@ export default function IndexScreen() {
           <View style={styles.summaryOrb} />
           <View style={styles.summaryContent}>
             <Text style={styles.summaryLabel}>ATENÇÃO HOJE</Text>
-            <Text style={styles.summaryNumber}>03 itens</Text>
-            <Text style={styles.summaryDescription}>em 2 lojas precisam de você</Text>
+            <Text style={styles.summaryNumber}>{pad2(urgentCount)} itens</Text>
+            <Text style={styles.summaryDescription}>
+              {urgentCount === 0
+                ? 'Nenhum item urgente no momento'
+                : `em ${urgentStoreCount} loja${urgentStoreCount === 1 ? '' : 's'} precisam de você`}
+            </Text>
           </View>
           <AlertTriangle size={52} color={colors.oliveLight} strokeWidth={1.3} />
         </Pressable>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Visão geral</Text>
-          <Text style={styles.sectionMeta}>12 registros</Text>
+          <Text style={styles.sectionMeta}>{records.length} registros</Text>
         </View>
         <View style={styles.metricRow}>
-          <Metric icon={<Clock3 size={18} color={colors.orange} />} value="03" label="Urgentes" tone="orange" onPress={() => router.push('/all-items?filter=Urgentes')} />
-          <Metric icon={<CircleCheck size={18} color={colors.olive} />} value="06" label="Pendentes" tone="olive" onPress={() => router.push('/all-items?filter=Pendentes')} />
-          <Metric icon={<Store size={18} color={colors.plum} />} value="04" label="Lojas" tone="plum" onPress={() => router.push('/all-items')} />
+          <Metric icon={<Clock3 size={18} color={colors.orange} />} value={pad2(urgentCount)} label="Urgentes" tone="orange" onPress={() => router.push('/all-items?filter=Urgentes')} />
+          <Metric icon={<CircleCheck size={18} color={colors.olive} />} value={pad2(pendingCount)} label="Pendentes" tone="olive" onPress={() => router.push('/all-items?filter=Pendentes')} />
+          <Metric icon={<Store size={18} color={colors.plum} />} value={pad2(storeCount)} label="Lojas" tone="plum" onPress={() => router.push('/all-items')} />
         </View>
 
         <View style={styles.sectionHeader}>
@@ -204,44 +206,25 @@ export default function IndexScreen() {
               </Pressable>
             </View>
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              <Text style={styles.inputLabel}>Item</Text>
-              <TextInput value={itemName} onChangeText={setItemName} placeholder="Ex.: Biscoito recheado" placeholderTextColor={colors.muted} style={styles.input} autoFocus />
-              <Text style={styles.inputLabel}>Data de vencimento</Text>
-              <TextInput value={expiryDate} onChangeText={(text) => setExpiryDate(formatDateInput(text))} placeholder="DD/MM/AAAA" placeholderTextColor={colors.muted} style={styles.input} keyboardType="number-pad" maxLength={10} />
-
-              <Text style={styles.inputLabel}>Loja (opcional)</Text>
-              <TextInput value={store} onChangeText={setStore} placeholder="Ex.: Supermercado Central" placeholderTextColor={colors.muted} style={styles.input} />
-
-              <Text style={styles.inputLabel}>Quantidade (opcional)</Text>
-              <TextInput value={quantity} onChangeText={setQuantity} placeholder="Ex.: 08 un." placeholderTextColor={colors.muted} style={styles.input} />
-
-              <Text style={styles.inputLabel}>Marca (opcional)</Text>
-              <TextInput value={brand} onChangeText={setBrand} placeholder="Ex.: Italac" placeholderTextColor={colors.muted} style={styles.input} />
-
-              <Text style={styles.inputLabel}>Observação (opcional)</Text>
-              <TextInput value={note} onChangeText={setNote} placeholder="Ex.: Conferir prateleira 3" placeholderTextColor={colors.muted} style={styles.input} multiline />
-
-              <Pressable style={styles.photoButton} onPress={pickPhoto}>
-                {photoUri ? (
-                  <Image source={{ uri: photoUri }} style={styles.photoThumbnail} />
-                ) : (
-                  <Camera size={20} color={colors.plum} />
-                )}
-                <Text style={styles.photoButtonText}>{photoUri ? 'Trocar foto (opcional)' : 'Adicionar foto (opcional)'}</Text>
-              </Pressable>
-
-              <View style={styles.alertRow}>
-                <View>
-                  <Text style={styles.inputLabel}>Alerta (opcional)</Text>
-                  <Text style={styles.alertHint}>Receber lembrete perto do vencimento</Text>
-                </View>
-                <Switch
-                  value={alertEnabled}
-                  onValueChange={setAlertEnabled}
-                  trackColor={{ false: colors.oliveWash, true: colors.olive }}
-                  thumbColor={colors.white}
-                />
-              </View>
+              <ItemForm
+                itemName={itemName}
+                onChangeItemName={setItemName}
+                expiryDate={expiryDate}
+                onChangeExpiryDate={setExpiryDate}
+                store={store}
+                onChangeStore={setStore}
+                quantity={quantity}
+                onChangeQuantity={setQuantity}
+                brand={brand}
+                onChangeBrand={setBrand}
+                note={note}
+                onChangeNote={setNote}
+                alertEnabled={alertEnabled}
+                onChangeAlertEnabled={setAlertEnabled}
+                photoUri={photoUri}
+                onPickPhoto={handlePickPhoto}
+                autoFocusItem
+              />
             </ScrollView>
             <Pressable style={[styles.saveButton, (!itemName.trim() || !expiryDate.trim()) && styles.saveButtonDisabled]} onPress={addRecord} disabled={!itemName.trim() || !expiryDate.trim()}>
               <Text style={styles.saveButtonText}>Salvar item</Text>
@@ -319,13 +302,6 @@ const styles = StyleSheet.create({
   modalEyebrow: { color: colors.olive, fontSize: 10, fontWeight: '800', letterSpacing: 1.3, marginBottom: 6 },
   modalTitle: { color: colors.ink, fontSize: 22, fontWeight: '700' },
   closeButton: { backgroundColor: colors.white, padding: 8, borderRadius: 20 },
-  inputLabel: { color: colors.ink, fontSize: 12, fontWeight: '700', marginBottom: 7 },
-  input: { height: 50, borderRadius: 13, backgroundColor: colors.white, paddingHorizontal: 15, color: colors.ink, fontSize: 15, marginBottom: 16 },
-  photoButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 16 },
-  photoThumbnail: { width: 32, height: 32, borderRadius: 8 },
-  photoButtonText: { color: colors.plum, fontSize: 14, fontWeight: '600' },
-  alertRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  alertHint: { color: colors.muted, fontSize: 12, maxWidth: 220 },
   saveButton: { height: 52, borderRadius: 15, backgroundColor: colors.plum, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   saveButtonDisabled: { opacity: 0.45 },
   saveButtonText: { color: colors.cream, fontSize: 15, fontWeight: '700' },
