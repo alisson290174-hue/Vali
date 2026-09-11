@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { differenceInCalendarDays, parse } from 'date-fns';
 import {
   AlertTriangle,
   Bell,
@@ -23,34 +24,51 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { insertItem, listItems, seedIfEmpty } from './db/items';
+import type { Item } from './db/types';
+
+function daysUntil(expiryDate: string): number {
+  const parsed = parse(expiryDate, 'dd/MM/yyyy', new Date());
+  return differenceInCalendarDays(parsed, new Date());
+}
+
+function urgencyLabel(days: number): string {
+  if (days <= 3) return 'Urgente';
+  if (days <= 7) return 'Atenção';
+  return 'No prazo';
+}
 
 export default function App() {
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [itemName, setItemName] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
-  const [records, setRecords] = useState(initialRecords);
+  const [records, setRecords] = useState<Item[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function bootstrap() {
+      await seedIfEmpty();
+      const items = await listItems();
+      if (isMounted) setRecords(items);
+    }
+    bootstrap();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const visibleRecords = records.filter((record) => {
-    if (activeFilter === 'Urgentes') return record.days <= 3;
-    if (activeFilter === 'Esta semana') return record.days <= 7;
+    const days = daysUntil(record.expiryDate);
+    if (activeFilter === 'Urgentes') return days <= 3;
+    if (activeFilter === 'Esta semana') return days <= 7;
     return true;
   });
 
-  function addRecord() {
+  async function addRecord() {
     if (!itemName.trim() || !expiryDate.trim()) return;
-    setRecords((current) => [
-      {
-        id: String(Date.now()),
-        item: itemName.trim(),
-        store: 'Sem loja definida',
-        date: expiryDate.trim(),
-        days: 7,
-        quantity: 'Não informado',
-        status: 'Atenção',
-      },
-      ...current,
-    ]);
+    const created = await insertItem({ item: itemName.trim(), expiryDate: expiryDate.trim() });
+    setRecords((current) => [created, ...current]);
     setItemName('');
     setExpiryDate('');
     setIsAddOpen(false);
@@ -149,21 +167,14 @@ export default function App() {
   );
 }
 
-type Record = typeof initialRecords[number];
-
-const initialRecords = [
-  { id: '1', item: 'Leite integral 1L', store: 'Supermercado Central', date: '14/09/2026', days: 3, quantity: '08 un.', status: 'Urgente' },
-  { id: '2', item: 'Biscoito recheado', store: 'Mercado do Bairro', date: '18/09/2026', days: 7, quantity: '12 un.', status: 'Atenção' },
-  { id: '3', item: 'Suco de uva 1L', store: 'Supermercado Central', date: '29/09/2026', days: 18, quantity: '05 un.', status: 'No prazo' },
-];
-
 function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: 'orange' | 'olive' | 'plum' }) {
   return <View style={styles.metric}><View style={[styles.metricIcon, { backgroundColor: colors[`${tone}Wash`] }]}>{icon}</View><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>;
 }
 
-function ExpiryRow({ record }: { record: Record }) {
-  const isUrgent = record.days <= 3;
-  return <View style={styles.recordRow}><View style={[styles.recordImage, isUrgent && styles.recordImageUrgent]}><Text style={styles.recordImageText}>{record.item.charAt(0)}</Text></View><View style={styles.recordMain}><Text style={styles.recordName} numberOfLines={1}>{record.item}</Text><View style={styles.storeLine}><Store size={13} color={colors.muted} /><Text style={styles.storeText} numberOfLines={1}>{record.store}</Text></View><Text style={styles.recordQuantity}>{record.quantity}</Text></View><View style={styles.recordRight}><View style={[styles.statusPill, isUrgent ? styles.statusUrgent : styles.statusNormal]}><Text style={[styles.statusText, isUrgent && styles.statusTextUrgent]}>{record.status}</Text></View><Text style={styles.recordDate}>{record.date}</Text></View></View>;
+function ExpiryRow({ record }: { record: Item }) {
+  const days = daysUntil(record.expiryDate);
+  const isUrgent = days <= 3;
+  return <View style={styles.recordRow}><View style={[styles.recordImage, isUrgent && styles.recordImageUrgent]}><Text style={styles.recordImageText}>{record.item.charAt(0)}</Text></View><View style={styles.recordMain}><Text style={styles.recordName} numberOfLines={1}>{record.item}</Text><View style={styles.storeLine}><Store size={13} color={colors.muted} /><Text style={styles.storeText} numberOfLines={1}>{record.store ?? 'Sem loja definida'}</Text></View><Text style={styles.recordQuantity}>{record.quantity ?? 'Não informado'}</Text></View><View style={styles.recordRight}><View style={[styles.statusPill, isUrgent ? styles.statusUrgent : styles.statusNormal]}><Text style={[styles.statusText, isUrgent && styles.statusTextUrgent]}>{urgencyLabel(days)}</Text></View><Text style={styles.recordDate}>{record.expiryDate}</Text></View></View>;
 }
 
 const colors = {

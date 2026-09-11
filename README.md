@@ -21,7 +21,7 @@ npm install
 npx expo start
 ```
 
-Abra o QR code com o Expo Go no iPhone conectado a mesma rede. O app ainda esta na fase de prototipo visual: o dashboard e o cadastro rapido funcionam em memoria; SQLite e notificacoes locais serao integrados na proxima fatia.
+Abra o QR code com o Expo Go no iPhone conectado a mesma rede. Cadastro e listagem ja persistem em SQLite local (`db/`); notificacoes locais e a edicao de status (Pendente, Resolvido, Retirado, Trocado, Vencido) serao integradas na proxima fatia.
 
 ## Validacao
 
