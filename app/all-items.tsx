@@ -1,5 +1,5 @@
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExpiryRow } from '../components/ExpiryRow';
@@ -10,8 +10,13 @@ import { colors } from '../lib/theme';
 
 export default function AllItemsScreen() {
   const { filter } = useLocalSearchParams<{ filter?: string }>();
+  const navigation = useNavigation();
   const [records, setRecords] = useState<Item[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    navigation.setOptions({ title: filter === 'Historico' ? 'Histórico' : 'Todos os itens' });
+  }, [navigation, filter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,7 +47,11 @@ export default function AllItemsScreen() {
         renderItem={({ item }) => <ExpiryRow record={item} />}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.plum} />}
-        ListEmptyComponent={<Text style={styles.emptyText}>Nenhum item encontrado.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            {filter === 'Historico' ? 'Nenhum item no histórico ainda.' : 'Nenhum item encontrado.'}
+          </Text>
+        }
       />
     </SafeAreaView>
   );

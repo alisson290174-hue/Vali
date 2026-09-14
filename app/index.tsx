@@ -3,9 +3,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   AlertTriangle,
+  Archive,
   Bell,
   ChevronRight,
-  CircleCheck,
   Clock3,
   Plus,
   Store,
@@ -89,13 +89,18 @@ export default function IndexScreen() {
     }, [])
   );
 
-  const visibleRecords = filterByCriteria(records, activeFilter);
+  // Home foca só no que ainda precisa de atenção (status Pendente). Itens
+  // resolvidos/retirados/trocados/vencidos saem daqui e vivem no Histórico
+  // ("Ver todos" filtrado), pra não competir visualmente com o que é ativo.
+  const activeItems = records.filter((record) => record.status === 'Pendente');
+  const historicoCount = records.length - activeItems.length;
+
+  const visibleRecords = filterByCriteria(activeItems, activeFilter);
   const homePreviewRecords = sortByUrgency(visibleRecords).slice(0, HOME_PREVIEW_LIMIT);
 
-  const urgentRecords = records.filter((record) => daysUntil(record.expiryDate) <= 3);
+  const urgentRecords = activeItems.filter((record) => daysUntil(record.expiryDate) <= 3);
   const urgentCount = urgentRecords.length;
-  const pendingCount = records.filter((record) => record.status === 'Pendente').length;
-  const storeCount = countDistinctStores(records);
+  const storeCount = countDistinctStores(activeItems);
   const urgentStoreCount = countDistinctStores(urgentRecords);
   const hasUpcomingReminder = records.some((record) => record.alertEnabled && getNextReminder(record) !== null);
 
@@ -217,11 +222,11 @@ export default function IndexScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Visão geral</Text>
-          <Text style={styles.sectionMeta}>{records.length} registros</Text>
+          <Text style={styles.sectionMeta}>{activeItems.length} ativos</Text>
         </View>
         <View style={styles.metricRow}>
           <Metric icon={<Clock3 size={18} color={colors.orange} />} value={pad2(urgentCount)} label="Urgentes" tone="orange" onPress={() => router.push('/all-items?filter=Urgentes')} />
-          <Metric icon={<CircleCheck size={18} color={colors.olive} />} value={pad2(pendingCount)} label="Pendentes" tone="olive" onPress={() => router.push('/all-items?filter=Pendentes')} />
+          <Metric icon={<Archive size={18} color={colors.olive} />} value={pad2(historicoCount)} label="Histórico" tone="olive" onPress={() => router.push('/all-items?filter=Historico')} />
           <Metric icon={<Store size={18} color={colors.plum} />} value={pad2(storeCount)} label="Lojas" tone="plum" onPress={() => router.push('/all-items')} />
         </View>
 

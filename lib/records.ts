@@ -60,6 +60,7 @@ export function filterByCriteria(records: Item[], filter: string | undefined): I
     if (filter === 'Urgentes') return days <= 3;
     if (filter === 'Esta semana') return days <= 7;
     if (filter === 'Pendentes') return record.status === 'Pendente';
+    if (filter === 'Historico') return record.status !== 'Pendente';
     return true;
   });
 }
