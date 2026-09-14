@@ -9,7 +9,8 @@ export default function RootLayout() {
   useNotificationDeepLink();
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
         <Stack.Screen
           name="all-items"
           options={{
