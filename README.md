@@ -1,8 +1,26 @@
 # Vali
 
-**Vali - validade sob controle**
+**Vali — validade sob controle**
 
-Aplicativo mobile para promotores de vendas registrarem itens com validade curta por loja e receberem lembretes locais.
+[![Ultima versao](https://img.shields.io/github/v/release/alisson290174-hue/Vali?label=ultima%20vers%C3%A3o&sort=semver)](https://github.com/alisson290174-hue/Vali/releases/latest)
+
+## Sobre o app
+
+Promotores de vendas costumam cuidar de dezenas de itens de validade curta espalhados por varias lojas, e depender de memoria ou anotacoes soltas pra saber o que esta perto de vencer. O Vali resolve isso: um cadastro rapido (item + data de vencimento e pronto) e o app avisa sozinho, com notificacao local, antes do produto vencer — sem depender de internet, servidor ou login. Tudo fica salvo no proprio celular.
+
+Projeto pessoal com dois objetivos: ser uma ferramenta real de uso diario e servir de estudo pratico de React Native/Expo.
+
+## Como instalar (Android)
+
+A versao mais recente pronta pra instalar fica sempre na pagina de **[Releases](https://github.com/alisson290174-hue/Vali/releases/latest)** deste repositorio, como um arquivo `.apk`.
+
+1. Abra a [pagina de releases](https://github.com/alisson290174-hue/Vali/releases/latest) pelo navegador do celular/tablet Android e baixe o `.apk` da versao mais recente.
+2. Ao tentar instalar, o Android pode avisar que a fonte e desconhecida — toque em "Configuracoes" nesse aviso e permita instalar a partir do navegador (so na primeira vez).
+3. Conclua a instalacao normalmente. O icone do Vali aparece na tela como qualquer outro app.
+
+Nao precisa de Play Store, conta ou internet pra usar depois de instalado — o app roda 100% local.
+
+> iOS ainda nao tem instalador publico (exige conta paga da Apple Developer Program); esta nos planos para quando o app estiver mais completo.
 
 ## Direcao do MVP
 
