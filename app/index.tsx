@@ -30,7 +30,7 @@ import { ItemForm } from '../components/ItemForm';
 import { insertItem, listItems, seedIfEmpty } from '../db/items';
 import type { Item } from '../db/types';
 import { colors } from '../lib/theme';
-import { countDistinctStores, daysUntil, filterByCriteria, isValidExpiryDate, sortByUrgency } from '../lib/records';
+import { countDistinctStores, daysUntil, filterByCriteria, isValidExpiryDate, reminderExceedsRemaining, sortByUrgency } from '../lib/records';
 import { pickPhoto } from '../lib/photo';
 import { getNextReminder, syncRemindersForItem } from '../lib/notifications';
 
@@ -39,6 +39,7 @@ function pad2(value: number): string {
 }
 
 const HOME_PREVIEW_LIMIT = 5;
+const DEFAULT_REMINDER_DAYS_BEFORE = 10;
 
 export default function IndexScreen() {
   const router = useRouter();
@@ -50,15 +51,15 @@ export default function IndexScreen() {
   const [quantity, setQuantity] = useState('');
   const [brand, setBrand] = useState('');
   const [note, setNote] = useState('');
-  const [alertEnabled, setAlertEnabled] = useState(false);
-  const [reminderDaysBefore, setReminderDaysBefore] = useState<number | null>(null);
+  const [alertEnabled, setAlertEnabled] = useState(true);
+  const [reminderDaysBefore, setReminderDaysBefore] = useState<number | null>(DEFAULT_REMINDER_DAYS_BEFORE);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [records, setRecords] = useState<Item[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   function handleAlertToggle(value: boolean) {
     setAlertEnabled(value);
-    if (value && reminderDaysBefore === null) setReminderDaysBefore(3);
+    if (value && reminderDaysBefore === null) setReminderDaysBefore(DEFAULT_REMINDER_DAYS_BEFORE);
   }
 
   async function loadRecords() {
@@ -98,7 +99,10 @@ export default function IndexScreen() {
   const urgentStoreCount = countDistinctStores(urgentRecords);
   const hasUpcomingReminder = records.some((record) => record.alertEnabled && getNextReminder(record) !== null);
 
-  const canSave = itemName.trim().length > 0 && isValidExpiryDate(expiryDate);
+  const canSave =
+    itemName.trim().length > 0 &&
+    isValidExpiryDate(expiryDate) &&
+    (!alertEnabled || !reminderExceedsRemaining(expiryDate, reminderDaysBefore));
 
   async function addRecord() {
     if (!canSave) return;
@@ -131,15 +135,46 @@ export default function IndexScreen() {
     setStore('');
     setQuantity('');
     setBrand('');
-    setReminderDaysBefore(null);
+    setReminderDaysBefore(DEFAULT_REMINDER_DAYS_BEFORE);
     setNote('');
-    setAlertEnabled(false);
+    setAlertEnabled(true);
     setPhotoUri(null);
   }
 
   async function handlePickPhoto() {
     const uri = await pickPhoto();
     if (uri) setPhotoUri(uri);
+  }
+
+  // alertEnabled/reminderDaysBefore começam com valor padrão (não em branco), então
+  // não entram nessa checagem — só contam como "não salvo" os campos que o usuário
+  // realmente preencheu.
+  const hasUnsavedInput =
+    itemName.trim().length > 0 ||
+    expiryDate.length > 0 ||
+    store.trim().length > 0 ||
+    quantity.trim().length > 0 ||
+    brand.trim().length > 0 ||
+    note.trim().length > 0 ||
+    photoUri !== null;
+
+  function handleCloseAdd() {
+    if (!hasUnsavedInput) {
+      resetForm();
+      setIsAddOpen(false);
+      return;
+    }
+    Alert.alert('Descartar item?', 'Você preencheu informações que ainda não foram salvas.', [
+      { text: 'Continuar editando', style: 'cancel' },
+      {
+        text: 'Descartar',
+        style: 'destructive',
+        onPress: () => {
+          resetForm();
+          setIsAddOpen(false);
+        },
+      },
+    ]);
   }
 
   return (
@@ -225,15 +260,7 @@ export default function IndexScreen() {
         <Text style={styles.fabText}>Novo item</Text>
       </Pressable>
 
-      <Modal
-        visible={isAddOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => {
-          resetForm();
-          setIsAddOpen(false);
-        }}
-      >
+      <Modal visible={isAddOpen} transparent animationType="slide" onRequestClose={handleCloseAdd}>
         <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
@@ -241,15 +268,7 @@ export default function IndexScreen() {
                 <Text style={styles.modalEyebrow}>REGISTRO RÁPIDO</Text>
                 <Text style={styles.modalTitle}>O que está perto do prazo?</Text>
               </View>
-              <Pressable
-                onPress={() => {
-                  resetForm();
-                  setIsAddOpen(false);
-                }}
-                style={styles.closeButton}
-                accessibilityRole="button"
-                accessibilityLabel="Fechar"
-              >
+              <Pressable onPress={handleCloseAdd} style={styles.closeButton} accessibilityRole="button" accessibilityLabel="Fechar">
                 <X size={20} color={colors.ink} />
               </Pressable>
             </View>

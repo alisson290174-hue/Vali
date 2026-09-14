@@ -144,9 +144,9 @@ export async function deleteItem(id: string): Promise<void> {
 }
 
 const SEED_ITEMS: NewItemInput[] = [
-  { item: 'Leite integral 1L', expiryDate: '14/09/2026', store: 'Supermercado Central', quantity: '08 un.' },
-  { item: 'Biscoito recheado', expiryDate: '18/09/2026', store: 'Mercado do Bairro', quantity: '12 un.' },
-  { item: 'Suco de uva 1L', expiryDate: '29/09/2026', store: 'Supermercado Central', quantity: '05 un.' },
+  { item: 'Leite integral 1L', expiryDate: '14/09/2026', store: 'Supermercado Central', quantity: '08' },
+  { item: 'Biscoito recheado', expiryDate: '18/09/2026', store: 'Mercado do Bairro', quantity: '12' },
+  { item: 'Suco de uva 1L', expiryDate: '29/09/2026', store: 'Supermercado Central', quantity: '05' },
 ];
 
 export async function seedIfEmpty(): Promise<void> {

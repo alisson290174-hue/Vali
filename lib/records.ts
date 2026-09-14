@@ -37,6 +37,12 @@ export function isValidExpiryDate(value: string): boolean {
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
+export function reminderExceedsRemaining(expiryDate: string, reminderDaysBefore: number | null): boolean {
+  if (reminderDaysBefore === null || !isValidExpiryDate(expiryDate)) return false;
+  const remaining = daysUntil(expiryDate);
+  return remaining >= 0 && reminderDaysBefore > remaining;
+}
+
 export function sortByUrgency(records: Item[]): Item[] {
   return [...records].sort((a, b) => daysUntil(a.expiryDate) - daysUntil(b.expiryDate));
 }

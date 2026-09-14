@@ -76,18 +76,18 @@ Ver plano completo em [plan-ajustes-finos.md](plan-ajustes-finos.md).
 
 ### Task 4: Interceptar saída com alterações não salvas
 
-**Description:** Em `app/item/[id].tsx`, guardar um snapshot dos valores carregados; comparar com os valores atuais pra saber se há mudança (`isDirty`). Usar `useNavigation().addListener('beforeRemove', ...)` pra interceptar voltar (botão, gesto, header) e mostrar `Alert` com "Continuar editando" / "Descartar" quando `isDirty`. `handleSave` e `handleDelete` sinalizam um bypass antes de chamar `router.back()`, pra não disparar o aviso nessas saídas intencionais.
+**Description:** Em `app/item/[id].tsx`, guardar um snapshot dos valores carregados; comparar com os valores atuais pra saber se há mudança (`isDirty`). **[REESCRITO]** A abordagem original (`useNavigation().addListener('beforeRemove', ...)`) causava um erro real do native-stack ("removed natively but didn't get removed from JS state") quando cancelado via gesto/header nativos. Trocado por controle total do "voltar" nessa tela: gesto nativo desligado (`gestureEnabled: false` em `app/_layout.tsx`), header customizado via `navigation.setOptions({ headerLeft: ... })`, e `BackHandler` pro botão físico do Android — tudo passando pelo mesmo `handleBackPress`, que decide se sai direto ou confirma descarte.
 
 **Acceptance criteria:**
-- [ ] Editar um campo e tentar voltar (botão nativo ou gesto) pede confirmação
-- [ ] "Continuar editando" cancela a navegação, nada é perdido
-- [ ] "Descartar" navega de volta sem salvar
-- [ ] Salvar ou excluir navegam de volta sem pedir confirmação
-- [ ] Voltar sem ter mudado nada não pede confirmação
+- [x] Editar um campo e tentar voltar (botão do cabeçalho ou físico do Android) pede confirmação
+- [x] "Continuar editando" cancela a navegação, nada é perdido
+- [x] "Descartar" navega de volta sem salvar
+- [x] Salvar ou excluir navegam de volta sem pedir confirmação
+- [x] Voltar sem ter mudado nada não pede confirmação
 
 **Verification:**
-- [ ] `npx tsc --noEmit`
-- [ ] Manual: os 5 cenários acima
+- [x] `npx tsc --noEmit`
+- [x] Manual: os 5 cenários acima (confirmado pelo usuário, sem o erro do native-stack)
 
 **Dependencies:** None (independente da Fase 1)
 
@@ -99,8 +99,18 @@ Ver plano completo em [plan-ajustes-finos.md](plan-ajustes-finos.md).
 ---
 
 ## Checkpoint: Fase 2
-- [ ] `npx tsc --noEmit` limpo
-- [ ] Manual: os 5 cenários da Task 4 confirmados
+- [x] `npx tsc --noEmit` limpo
+- [x] Manual: os 5 cenários da Task 4 confirmados
+
+## Ajustes extras (fora do plano original, pedidos durante os testes)
+
+- [x] Quantidade no cadastro/edição: campo só aceita número, sem "un." fixo (seeds corrigidos, placeholder atualizado)
+- [x] Status "Vencido" só fica selecionável quando o item já passou da data (antes dava pra marcar Vencido num item ainda dentro da validade)
+- [x] Modal de "Novo item" (X e botão físico) também confirma descarte se já tiver algo preenchido — mesma proteção da Fase 2, mas pro cadastro
+- [x] Alerta liga por padrão ao cadastrar, com antecedência padrão de 10 dias (chip "10 dias" adicionado)
+- [x] Aviso quando a antecedência escolhida é maior que os dias restantes (o aviso antecipado não chegaria a tempo) — e isso agora **bloqueia** salvar, não só avisa
+- [x] Aviso ao tentar digitar mais de 99 dias de antecedência
+- [x] Antecedência padrão se ajusta sozinha quando a data cadastrada é mais curta que o padrão (evita travar o salvar sem o usuário entender por quê)
 
 ## Phase 3: Backup (exportar/importar)
 

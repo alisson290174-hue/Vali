@@ -26,7 +26,11 @@ export default function RootLayout() {
           options={{
             headerShown: true,
             title: 'Detalhes do item',
-            headerBackTitle: 'Voltar',
+            // Gesto nativo desligado de propósito: essa tela controla o próprio
+            // "voltar" (ver app/item/[id].tsx) pra poder confirmar descarte de
+            // alterações não salvas — o native-stack não suporta bem cancelar
+            // uma remoção de tela já iniciada pelo gesto.
+            gestureEnabled: false,
             headerStyle: { backgroundColor: colors.cream },
             headerTintColor: colors.plum,
             headerTitleStyle: { color: colors.ink },

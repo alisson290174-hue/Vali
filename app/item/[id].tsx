@@ -1,6 +1,7 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { ChevronLeft } from 'lucide-react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ItemForm } from '../../components/ItemForm';
 import { StatusIcon } from '../../components/StatusIcon';
@@ -8,7 +9,7 @@ import { deleteItem, getItem, updateItem } from '../../db/items';
 import type { ItemStatus } from '../../db/types';
 import { cancelReminder, syncRemindersForItem } from '../../lib/notifications';
 import { pickPhoto } from '../../lib/photo';
-import { isValidExpiryDate } from '../../lib/records';
+import { daysUntil, isValidExpiryDate, reminderExceedsRemaining } from '../../lib/records';
 import { STATUS_META } from '../../lib/status';
 import { colors } from '../../lib/theme';
 
@@ -33,6 +34,19 @@ export default function ItemDetailScreen() {
   const [statusSavedHint, setStatusSavedHint] = useState(false);
   const statusHintTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notificationIdsRef = useRef<{ early: string | null; final: string | null }>({ early: null, final: null });
+  const navigation = useNavigation();
+  const isDirtyRef = useRef(false);
+  const initialValuesRef = useRef<{
+    itemName: string;
+    expiryDate: string;
+    store: string;
+    quantity: string;
+    brand: string;
+    note: string;
+    alertEnabled: boolean;
+    reminderDaysBefore: number | null;
+    photoUri: string | null;
+  } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -60,6 +74,17 @@ export default function ItemDetailScreen() {
       notificationIdsRef.current = { early: found.earlyNotificationId, final: found.finalNotificationId };
       setPhotoUri(found.photoUri);
       setStatus(found.status);
+      initialValuesRef.current = {
+        itemName: found.item,
+        expiryDate: found.expiryDate,
+        store: found.store ?? '',
+        quantity: found.quantity ?? '',
+        brand: found.brand ?? '',
+        note: found.note ?? '',
+        alertEnabled: found.alertEnabled,
+        reminderDaysBefore: found.reminderDaysBefore,
+        photoUri: found.photoUri,
+      };
       setIsLoading(false);
     });
     return () => {
@@ -67,8 +92,65 @@ export default function ItemDetailScreen() {
     };
   }, [id]);
 
+  useEffect(() => {
+    const initial = initialValuesRef.current;
+    isDirtyRef.current = Boolean(
+      initial &&
+        (itemName !== initial.itemName ||
+          expiryDate !== initial.expiryDate ||
+          store !== initial.store ||
+          quantity !== initial.quantity ||
+          brand !== initial.brand ||
+          note !== initial.note ||
+          alertEnabled !== initial.alertEnabled ||
+          reminderDaysBefore !== initial.reminderDaysBefore ||
+          photoUri !== initial.photoUri)
+    );
+  });
+
+  // Native-stack não suporta bem cancelar uma remoção de tela já iniciada pelo
+  // gesto/botão nativo (usePreventRemove nem está disponível via expo-router).
+  // Em vez de interceptar a navegação nativa, assumimos o controle total do
+  // "voltar" nessa tela: gesto e header nativos ficam desligados (ver
+  // app/_layout.tsx), e este handler decide se pode sair direto ou se precisa
+  // confirmar o descarte, tanto pelo botão do cabeçalho quanto pelo botão
+  // físico/gesto de voltar do Android.
+  const handleBackPress = useCallback(() => {
+    if (!isDirtyRef.current) {
+      router.back();
+      return true;
+    }
+    Alert.alert('Descartar alterações?', 'Você tem alterações não salvas neste item.', [
+      { text: 'Continuar editando', style: 'cancel' },
+      { text: 'Descartar', style: 'destructive', onPress: () => router.back() },
+    ]);
+    return true;
+  }, [router]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <Pressable onPress={handleBackPress} style={styles.headerBackButton} accessibilityRole="button" accessibilityLabel="Voltar">
+          <ChevronLeft size={26} color={colors.plum} />
+        </Pressable>
+      ),
+    });
+  }, [navigation, handleBackPress]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+    return () => subscription.remove();
+  }, [handleBackPress]);
+
   async function handleStatusChange(option: ItemStatus) {
     if (option === status) return;
+    if (option === 'Vencido' && !isPastDue) {
+      Alert.alert(
+        'Ainda não venceu',
+        'Esse item ainda está dentro da validade. O status "Vencido" fica disponível depois que a data passar.'
+      );
+      return;
+    }
     const previous = status;
     setStatus(option);
     try {
@@ -83,10 +165,14 @@ export default function ItemDetailScreen() {
 
   function handleAlertToggle(value: boolean) {
     setAlertEnabled(value);
-    if (value && reminderDaysBefore === null) setReminderDaysBefore(3);
+    if (value && reminderDaysBefore === null) setReminderDaysBefore(10);
   }
 
-  const canSave = itemName.trim().length > 0 && isValidExpiryDate(expiryDate);
+  const canSave =
+    itemName.trim().length > 0 &&
+    isValidExpiryDate(expiryDate) &&
+    (!alertEnabled || !reminderExceedsRemaining(expiryDate, reminderDaysBefore));
+  const isPastDue = isValidExpiryDate(expiryDate) && daysUntil(expiryDate) < 0;
 
   async function handlePickPhoto() {
     const uri = await pickPhoto();
@@ -184,14 +270,15 @@ export default function ItemDetailScreen() {
           <View style={styles.statusRow}>
             {STATUS_OPTIONS.map((option) => {
               const isActive = status === option;
+              const isLockedVencido = option === 'Vencido' && !isPastDue && !isActive;
               const meta = STATUS_META[option];
               return (
                 <Pressable
                   key={option}
                   onPress={() => handleStatusChange(option)}
-                  style={[styles.statusChip, isActive && { backgroundColor: meta.bg }]}
+                  style={[styles.statusChip, isActive && { backgroundColor: meta.bg }, isLockedVencido && styles.statusChipLocked]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Status: ${option}`}
+                  accessibilityLabel={isLockedVencido ? `Status: ${option}, disponível só depois do vencimento` : `Status: ${option}`}
                   accessibilityState={{ selected: isActive }}
                 >
                   <StatusIcon status={option} size={14} color={isActive ? meta.text : colors.muted} />
@@ -227,12 +314,14 @@ const styles = StyleSheet.create({
   content: { padding: 22, paddingBottom: 40 },
   loadingText: { color: colors.muted, textAlign: 'center', marginTop: 40, marginHorizontal: 22, marginBottom: 20 },
   backButton: { alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 15, backgroundColor: colors.plum },
+  headerBackButton: { paddingHorizontal: 8, paddingVertical: 6, marginLeft: 4 },
   backButtonText: { color: colors.cream, fontSize: 14, fontWeight: '700' },
   inputLabel: { color: colors.ink, fontSize: 12, fontWeight: '700', marginBottom: 7 },
   statusHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   statusSavedHint: { color: colors.olive, fontSize: 12, fontWeight: '700', marginBottom: 7 },
   statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
   statusChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: colors.white },
+  statusChipLocked: { opacity: 0.4 },
   statusChipText: { color: colors.muted, fontSize: 12, fontWeight: '600' },
   saveButton: { height: 52, borderRadius: 15, backgroundColor: colors.plum, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   saveButtonDisabled: { opacity: 0.45 },

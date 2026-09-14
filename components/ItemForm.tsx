@@ -2,10 +2,12 @@ import { Camera, Expand, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { formatDateDigits, isValidExpiryDate } from '../lib/records';
+import { daysUntil, formatDateDigits, isValidExpiryDate, reminderExceedsRemaining } from '../lib/records';
+
+const MAX_REMINDER_DAYS_BEFORE = 99;
 import { colors } from '../lib/theme';
 
-const REMINDER_SHORTCUTS = [1, 3, 5, 7];
+const REMINDER_SHORTCUTS = [1, 3, 5, 7, 10];
 
 type ItemFormProps = {
   itemName: string;
@@ -51,6 +53,7 @@ export function ItemForm({
   autoFocusItem,
 }: ItemFormProps) {
   const [reminderText, setReminderText] = useState(reminderDaysBefore ? String(reminderDaysBefore) : '');
+  const [reminderCapWarning, setReminderCapWarning] = useState(false);
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
   const previousDateDigitsLength = useRef(expiryDate.replace(/\D/g, '').length);
 
@@ -62,6 +65,18 @@ export function ItemForm({
     previousDateDigitsLength.current = expiryDate.replace(/\D/g, '').length;
   }, [expiryDate]);
 
+  // Se a data de vencimento mudar pra algo mais próximo do que a antecedência
+  // atual permite, encolhe a antecedência sozinha pra caber — evita travar o
+  // "Salvar" com uma configuração que ficou inválida só porque a data mudou.
+  useEffect(() => {
+    if (!alertEnabled || reminderDaysBefore === null || !isValidExpiryDate(expiryDate)) return;
+    const remaining = daysUntil(expiryDate);
+    if (remaining >= 1 && reminderDaysBefore > remaining) {
+      onChangeReminderDaysBefore(remaining);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expiryDate, alertEnabled]);
+
   function handleExpiryDateChange(text: string) {
     const digits = text.replace(/\D/g, '').slice(0, 8);
     const isTypingForward = digits.length > previousDateDigitsLength.current;
@@ -69,14 +84,29 @@ export function ItemForm({
   }
 
   function handleReminderTextChange(text: string) {
-    const digits = text.replace(/\D/g, '').slice(0, 2);
-    setReminderText(digits);
-    if (digits) {
-      onChangeReminderDaysBefore(Math.max(1, parseInt(digits, 10)));
+    const rawDigits = text.replace(/\D/g, '').slice(0, 3);
+    const parsed = rawDigits ? parseInt(rawDigits, 10) : 0;
+    if (parsed > MAX_REMINDER_DAYS_BEFORE) {
+      setReminderCapWarning(true);
+      setReminderText(String(MAX_REMINDER_DAYS_BEFORE));
+      onChangeReminderDaysBefore(MAX_REMINDER_DAYS_BEFORE);
+      return;
+    }
+    setReminderCapWarning(false);
+    setReminderText(rawDigits);
+    if (rawDigits) {
+      onChangeReminderDaysBefore(Math.max(1, parsed));
     }
   }
 
+  function handleReminderShortcut(days: number) {
+    setReminderCapWarning(false);
+    onChangeReminderDaysBefore(days);
+  }
+
   const showDateError = expiryDate.length === 10 && !isValidExpiryDate(expiryDate);
+  const daysRemaining = isValidExpiryDate(expiryDate) ? daysUntil(expiryDate) : null;
+  const showExceedsRemainingWarning = !reminderCapWarning && reminderExceedsRemaining(expiryDate, reminderDaysBefore);
 
   return (
     <View>
@@ -98,7 +128,7 @@ export function ItemForm({
       <TextInput value={store} onChangeText={onChangeStore} placeholder="Ex.: Supermercado Central" placeholderTextColor={colors.muted} style={styles.input} />
 
       <Text style={styles.inputLabel}>Quantidade (opcional)</Text>
-      <TextInput value={quantity} onChangeText={onChangeQuantity} placeholder="Ex.: 08 un." placeholderTextColor={colors.muted} style={styles.input} />
+      <TextInput value={quantity} onChangeText={onChangeQuantity} placeholder="Ex.: 8" placeholderTextColor={colors.muted} style={styles.input} keyboardType="number-pad" />
 
       <Text style={styles.inputLabel}>Marca (opcional)</Text>
       <TextInput value={brand} onChangeText={onChangeBrand} placeholder="Ex.: Italac" placeholderTextColor={colors.muted} style={styles.input} />
@@ -163,7 +193,7 @@ export function ItemForm({
             {REMINDER_SHORTCUTS.map((days) => (
               <Pressable
                 key={days}
-                onPress={() => onChangeReminderDaysBefore(days)}
+                onPress={() => handleReminderShortcut(days)}
                 style={[styles.reminderChip, reminderDaysBefore === days && styles.reminderChipActive]}
                 accessibilityRole="button"
                 accessibilityLabel={`${days} ${days === 1 ? 'dia' : 'dias'} de antecedência`}
@@ -182,8 +212,17 @@ export function ItemForm({
             placeholderTextColor={colors.muted}
             style={styles.input}
             keyboardType="number-pad"
-            maxLength={2}
+            maxLength={3}
           />
+          {reminderCapWarning && (
+            <Text style={styles.errorText}>Máximo de {MAX_REMINDER_DAYS_BEFORE} dias de antecedência.</Text>
+          )}
+          {showExceedsRemainingWarning && daysRemaining !== null && (
+            <Text style={styles.errorText}>
+              Esse item vence em {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'} — um aviso com {reminderDaysBefore}{' '}
+              {reminderDaysBefore === 1 ? 'dia' : 'dias'} de antecedência não vai dar tempo de chegar.
+            </Text>
+          )}
           <Text style={styles.reminderHint}>
             Além disso, um último aviso sempre chega no dia do vencimento.
           </Text>
