@@ -74,7 +74,7 @@ export default function RootLayout() {
           name="backup"
           options={{
             headerShown: true,
-            title: 'Backup',
+            title: 'Configurações',
             headerBackTitle: 'Voltar',
             headerStyle: { backgroundColor: colors.cream },
             headerTintColor: colors.plum,

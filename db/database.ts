@@ -44,5 +44,11 @@ async function openDatabaseAndMigrate(): Promise<SQLite.SQLiteDatabase> {
   await ensureColumn(db, 'items', 'reminderDaysBefore', 'INTEGER');
   await ensureColumn(db, 'items', 'earlyNotificationId', 'TEXT');
   await ensureColumn(db, 'items', 'finalNotificationId', 'TEXT');
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT
+    );
+  `);
   return db;
 }

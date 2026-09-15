@@ -34,7 +34,7 @@ import type { Item } from '../db/types';
 import { colors } from '../lib/theme';
 import { countDistinctStores, daysUntil, filterByCriteria, isValidExpiryDate, listStoreNames, reminderExceedsRemaining, sortByUrgency } from '../lib/records';
 import { pickPhoto } from '../lib/photo';
-import { getNextReminder, syncRemindersForItem } from '../lib/notifications';
+import { getNextReminder, syncDailySummary, syncRemindersForItem } from '../lib/notifications';
 
 function pad2(value: number): string {
   return String(value).padStart(2, '0');
@@ -68,6 +68,7 @@ export default function IndexScreen() {
     await seedIfEmpty();
     const items = await listItems();
     setRecords(items);
+    syncDailySummary(items);
   }
 
   async function handleRefresh() {
@@ -83,6 +84,7 @@ export default function IndexScreen() {
         await seedIfEmpty();
         const items = await listItems();
         if (isMounted) setRecords(items);
+        syncDailySummary(items);
       }
       bootstrap();
       return () => {
@@ -201,7 +203,7 @@ export default function IndexScreen() {
             <Pressable style={styles.bellButton} accessibilityLabel="Estatísticas" accessibilityRole="button" onPress={() => router.push('/stats')}>
               <BarChart3 size={21} color={colors.plum} strokeWidth={2.2} />
             </Pressable>
-            <Pressable style={styles.bellButton} accessibilityLabel="Backup" accessibilityRole="button" onPress={() => router.push('/backup')}>
+            <Pressable style={styles.bellButton} accessibilityLabel="Configurações" accessibilityRole="button" onPress={() => router.push('/backup')}>
               <Settings size={21} color={colors.plum} strokeWidth={2.2} />
             </Pressable>
             <Pressable style={styles.bellButton} accessibilityLabel="Notificações" accessibilityRole="button" onPress={() => router.push('/notifications')}>

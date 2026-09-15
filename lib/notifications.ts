@@ -4,11 +4,17 @@ import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { updateItem } from '../db/items';
+import { getSetting, setSetting } from '../db/settings';
 import type { Item } from '../db/types';
+import { daysUntil } from './records';
 
 export const REMINDER_CHANNEL_ID = 'lembretes';
 const EARLY_REMINDER_HOUR = 9;
 const FINAL_REMINDER_HOUR = 8;
+const DAILY_SUMMARY_HOUR = 7;
+const DAILY_SUMMARY_MINUTE = 30;
+const DAILY_SUMMARY_ENABLED_KEY = 'dailySummaryEnabled';
+const DAILY_SUMMARY_NOTIFICATION_ID_KEY = 'dailySummaryNotificationId';
 
 let hasConfiguredHandler = false;
 
@@ -140,6 +146,62 @@ export async function syncRemindersForItem(item: Item): Promise<{ item: Item; pe
   return { item: updated, permissionDenied: false };
 }
 
+export async function isDailySummaryEnabled(): Promise<boolean> {
+  return (await getSetting(DAILY_SUMMARY_ENABLED_KEY)) === '1';
+}
+
+async function scheduleDailySummary(count: number): Promise<string | null> {
+  if (count === 0) return null;
+  return Notifications.scheduleNotificationAsync({
+    content: {
+      title: count === 1 ? 'Você tem 1 item vencendo essa semana' : `Você tem ${count} itens vencendo essa semana`,
+      body: 'Toque para ver a lista no Vali.',
+      data: { type: 'dailySummary' },
+      sound: 'default',
+    },
+    trigger:
+      Platform.OS === 'android'
+        ? {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            hour: DAILY_SUMMARY_HOUR,
+            minute: DAILY_SUMMARY_MINUTE,
+            channelId: REMINDER_CHANNEL_ID,
+          }
+        : { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: DAILY_SUMMARY_HOUR, minute: DAILY_SUMMARY_MINUTE },
+  });
+}
+
+// Reagenda o resumo diário com a contagem atual de itens pendentes vencendo
+// essa semana. Chamado toda vez que a home carrega, pra manter o número
+// razoavelmente atualizado sem precisar de um processo em segundo plano
+// (que o app não tem) — a contagem reflete o estado na última vez que o
+// app foi aberto, não em tempo real o dia inteiro.
+export async function syncDailySummary(items: Item[]): Promise<{ permissionDenied: boolean }> {
+  const enabled = await isDailySummaryEnabled();
+  const previousId = await getSetting(DAILY_SUMMARY_NOTIFICATION_ID_KEY);
+  await cancelReminder(previousId);
+
+  if (!enabled) {
+    return { permissionDenied: false };
+  }
+
+  const hasPermission = await requestNotificationPermission();
+  if (!hasPermission) {
+    await setSetting(DAILY_SUMMARY_NOTIFICATION_ID_KEY, '');
+    return { permissionDenied: true };
+  }
+
+  const count = items.filter((item) => item.status === 'Pendente' && daysUntil(item.expiryDate) <= 7).length;
+  const id = await scheduleDailySummary(count);
+  await setSetting(DAILY_SUMMARY_NOTIFICATION_ID_KEY, id ?? '');
+  return { permissionDenied: false };
+}
+
+export async function setDailySummaryEnabled(enabled: boolean, items: Item[]): Promise<{ permissionDenied: boolean }> {
+  await setSetting(DAILY_SUMMARY_ENABLED_KEY, enabled ? '1' : '0');
+  return syncDailySummary(items);
+}
+
 function extractItemId(response: Notifications.NotificationResponse): string | null {
   const itemId = response.notification.request.content.data?.itemId;
   return typeof itemId === 'string' ? itemId : null;
@@ -150,6 +212,10 @@ export function useNotificationDeepLink(): void {
 
   useEffect(() => {
     function handleResponse(response: Notifications.NotificationResponse) {
+      if (response.notification.request.content.data?.type === 'dailySummary') {
+        router.push('/all-items?filter=Esta semana');
+        return;
+      }
       const itemId = extractItemId(response);
       if (itemId) router.push(`/item/${itemId}`);
     }
