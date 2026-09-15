@@ -60,3 +60,7 @@ npx expo-doctor
 ```
 
 A primeira versao nao usa servidor, login ou servicos pagos.
+
+## Documentacao tecnica
+
+Este projeto tambem serve como estudo pratico de React Native/Expo. O raciocinio por tras das decisoes de arquitetura, os bugs reais encontrados (e como foram diagnosticados/corrigidos) ficam registrados em [`docs/decisoes-tecnicas.md`](docs/decisoes-tecnicas.md).
