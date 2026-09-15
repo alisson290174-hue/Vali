@@ -9,14 +9,14 @@ import { filterByCriteria, sortByUrgency } from '../lib/records';
 import { colors } from '../lib/theme';
 
 export default function AllItemsScreen() {
-  const { filter } = useLocalSearchParams<{ filter?: string }>();
+  const { filter, store } = useLocalSearchParams<{ filter?: string; store?: string }>();
   const navigation = useNavigation();
   const [records, setRecords] = useState<Item[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    navigation.setOptions({ title: filter === 'Historico' ? 'Histórico' : 'Todos os itens' });
-  }, [navigation, filter]);
+    navigation.setOptions({ title: store ? store : filter === 'Historico' ? 'Histórico' : 'Todos os itens' });
+  }, [navigation, filter, store]);
 
   useFocusEffect(
     useCallback(() => {
@@ -37,7 +37,8 @@ export default function AllItemsScreen() {
     setIsRefreshing(false);
   }
 
-  const sorted = sortByUrgency(filterByCriteria(records, filter));
+  const byStore = store ? records.filter((record) => record.store?.trim() === store) : records;
+  const sorted = sortByUrgency(filterByCriteria(byStore, filter));
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -49,7 +50,11 @@ export default function AllItemsScreen() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.plum} />}
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {filter === 'Historico' ? 'Nenhum item no histórico ainda.' : 'Nenhum item encontrado.'}
+            {store
+              ? 'Nenhum item dessa loja encontrado.'
+              : filter === 'Historico'
+                ? 'Nenhum item no histórico ainda.'
+                : 'Nenhum item encontrado.'}
           </Text>
         }
       />

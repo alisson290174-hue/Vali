@@ -49,6 +49,17 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="stores"
+          options={{
+            headerShown: true,
+            title: 'Lojas',
+            headerBackTitle: 'Voltar',
+            headerStyle: { backgroundColor: colors.cream },
+            headerTintColor: colors.plum,
+            headerTitleStyle: { color: colors.ink },
+          }}
+        />
+        <Stack.Screen
           name="backup"
           options={{
             headerShown: true,

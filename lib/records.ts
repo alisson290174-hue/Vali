@@ -54,6 +54,30 @@ export function countDistinctStores(records: Item[]): number {
   return new Set(stores).size;
 }
 
+export type StoreGroup = {
+  store: string;
+  items: Item[];
+  urgentCount: number;
+};
+
+export function groupByStore(records: Item[]): StoreGroup[] {
+  const groups = new Map<string, Item[]>();
+  for (const record of records) {
+    const store = record.store?.trim();
+    if (!store) continue;
+    const existing = groups.get(store);
+    if (existing) existing.push(record);
+    else groups.set(store, [record]);
+  }
+  return Array.from(groups.entries())
+    .map(([store, items]) => ({
+      store,
+      items,
+      urgentCount: items.filter((item) => item.status === 'Pendente' && daysUntil(item.expiryDate) <= 3).length,
+    }))
+    .sort((a, b) => a.store.localeCompare(b.store, 'pt-BR'));
+}
+
 export function filterByCriteria(records: Item[], filter: string | undefined): Item[] {
   return records.filter((record) => {
     const days = daysUntil(record.expiryDate);

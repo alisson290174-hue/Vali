@@ -233,7 +233,7 @@ export default function IndexScreen() {
         <View style={styles.metricRow}>
           <Metric icon={<Clock3 size={18} color={colors.orange} />} value={pad2(urgentCount)} label="Urgentes" tone="orange" onPress={() => router.push('/all-items?filter=Urgentes')} />
           <Metric icon={<Archive size={18} color={colors.olive} />} value={pad2(historicoCount)} label="Histórico" tone="olive" onPress={() => router.push('/all-items?filter=Historico')} />
-          <Metric icon={<Store size={18} color={colors.plum} />} value={pad2(storeCount)} label="Lojas" tone="plum" onPress={() => router.push('/all-items')} />
+          <Metric icon={<Store size={18} color={colors.plum} />} value={pad2(storeCount)} label="Lojas" tone="plum" onPress={() => router.push('/stores')} />
         </View>
 
         <View style={styles.sectionHeader}>
