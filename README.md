@@ -42,6 +42,7 @@ Nao precisa de Play Store, conta ou internet pra usar depois de instalado — o 
 - Vencimento automatico: item pendente com data passada vira "Vencido" sozinho.
 - Navegacao real com Expo Router (home, lista completa filtravel, tela de detalhes) com botao/gesto de voltar nativo.
 - Notificacoes locais com dois lembretes por item e deep-link pro item certo.
+- Backup: exportar todos os itens pra um arquivo e importar de volta (aditivo, sem sobrescrever nada).
 
 ## Desenvolvimento
 

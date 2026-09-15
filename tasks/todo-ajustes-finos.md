@@ -119,12 +119,12 @@ Ver plano completo em [plan-ajustes-finos.md](plan-ajustes-finos.md).
 **Description:** `npx expo install expo-file-system expo-sharing expo-document-picker`. Validar que o app continua abrindo normalmente antes de escrever qualquer lógica em cima.
 
 **Acceptance criteria:**
-- [ ] Dependências instaladas nas versões compatíveis com o SDK do projeto
-- [ ] `npx expo-doctor` sem novos erros
+- [x] Dependências instaladas nas versões compatíveis com o SDK do projeto
+- [x] `npx expo-doctor` sem novos erros
 
 **Verification:**
-- [ ] `npx expo-doctor`
-- [ ] Manual: reiniciar o servidor e abrir o app, sem crash
+- [x] `npx expo-doctor`
+- [x] Manual: reiniciar o servidor e abrir o app, sem crash
 
 **Dependencies:** None
 
@@ -140,13 +140,13 @@ Ver plano completo em [plan-ajustes-finos.md](plan-ajustes-finos.md).
 **Description:** `lib/backup.ts`: `exportBackup(): Promise<void>` — serializa todos os itens (`listItems()`) num JSON com um cabeçalho simples (versão do formato + data de exportação), escreve num arquivo temporário (`expo-file-system`) e abre a folha de compartilhamento nativa (`expo-sharing`).
 
 **Acceptance criteria:**
-- [ ] Gera um arquivo `.json` válido com todos os itens
-- [ ] Abre a folha de compartilhamento do sistema
-- [ ] Não deixa arquivo temporário obsoleto acumulando (reaproveita o mesmo nome/local a cada exportação)
+- [x] Gera um arquivo `.json` válido com todos os itens
+- [x] Abre a folha de compartilhamento do sistema
+- [x] Não deixa arquivo temporário obsoleto acumulando (reaproveita o mesmo nome/local a cada exportação)
 
 **Verification:**
-- [ ] `npx tsc --noEmit`
-- [ ] Manual: exportar e conferir o conteúdo do arquivo gerado
+- [x] `npx tsc --noEmit`
+- [x] Manual: exportar e conferir o conteúdo do arquivo gerado
 
 **Dependencies:** Task 5
 
@@ -159,16 +159,16 @@ Ver plano completo em [plan-ajustes-finos.md](plan-ajustes-finos.md).
 
 ### Task 7: Importar dados
 
-**Description:** `lib/backup.ts`: `importBackup(): Promise<{ imported: number } | null>` — abre o seletor de arquivos (`expo-document-picker`), lê e valida o JSON (estrutura mínima esperada), insere cada item como um registro novo (id novo, sem sobrescrever nada). Retorna `null` se o usuário cancelar a escolha do arquivo.
+**Description:** `lib/backup.ts`: **[AJUSTADO]** separado em `pickAndParseBackup(): Promise<BackupFile | null>` (escolhe o arquivo, lê e valida a estrutura, retorna `null` se cancelado) e `applyBackup(backup): Promise<{ imported: number; permissionDenied: boolean }>` (insere de fato) — split necessário pra tela poder mostrar "vai adicionar N itens" antes de confirmar (Task 8). Cada item importado também é resincronizado com `syncRemindersForItem`, então as notificações reais são reagendadas nesse aparelho, não só os dados copiados.
 
 **Acceptance criteria:**
-- [ ] Arquivo válido: todos os itens são inseridos como novos registros
-- [ ] Arquivo inválido/malformado: nada é inserido, erro claro é sinalizado
-- [ ] Cancelar a escolha do arquivo não faz nada (sem erro)
+- [x] Arquivo válido: todos os itens são inseridos como novos registros
+- [x] Arquivo inválido/malformado: nada é inserido, erro claro é sinalizado
+- [x] Cancelar a escolha do arquivo não faz nada (sem erro)
 
 **Verification:**
-- [ ] `npx tsc --noEmit`
-- [ ] Manual: importar um arquivo exportado pela Task 6, e depois testar um arquivo inválido de propósito
+- [x] `npx tsc --noEmit`
+- [x] Manual: importar um arquivo exportado pela Task 6, e depois testar um arquivo inválido de propósito
 
 **Dependencies:** Task 6
 
@@ -184,14 +184,14 @@ Ver plano completo em [plan-ajustes-finos.md](plan-ajustes-finos.md).
 **Description:** Nova rota `app/backup.tsx` com dois botões ("Exportar backup" / "Importar backup"), mostrando quantos itens existem hoje e (após importar) quantos foram adicionados. Ícone de engrenagem na home (ao lado do sino) navega pra essa tela. Registrar a rota no `app/_layout.tsx` com header nativo.
 
 **Acceptance criteria:**
-- [ ] Ícone de engrenagem visível e tocável na home
-- [ ] Tela mostra contagem atual de itens e os dois botões
-- [ ] Exportar e importar funcionam a partir da tela (usando `lib/backup.ts`)
-- [ ] Importar mostra confirmação antes de inserir ("isso vai adicionar N itens aos seus itens atuais")
+- [x] Ícone de engrenagem visível e tocável na home
+- [x] Tela mostra contagem atual de itens e os dois botões
+- [x] Exportar e importar funcionam a partir da tela (usando `lib/backup.ts`)
+- [x] Importar mostra confirmação antes de inserir ("isso vai adicionar N itens aos seus itens atuais")
 
 **Verification:**
-- [ ] `npx tsc --noEmit` e `npx expo-doctor`
-- [ ] Manual: fluxo completo exportar → importar de volta, conferir que os itens dobraram (comportamento aditivo esperado) e nenhum dado antigo sumiu
+- [x] `npx tsc --noEmit` e `npx expo-doctor`
+- [x] Manual: fluxo completo exportar → importar de volta, conferir que os itens dobraram (comportamento aditivo esperado) e nenhum dado antigo sumiu — confirmado pelo usuário
 
 **Dependencies:** Task 7
 
@@ -203,7 +203,7 @@ Ver plano completo em [plan-ajustes-finos.md](plan-ajustes-finos.md).
 ---
 
 ## Checkpoint: Complete
-- [ ] `npx tsc --noEmit` e `npx expo-doctor` limpos
-- [ ] Fluxo completo de backup validado manualmente (exportar → importar)
-- [ ] Vault Obsidian atualizado
-- [ ] Review com o usuário
+- [x] `npx tsc --noEmit` e `npx expo-doctor` limpos
+- [x] Fluxo completo de backup validado manualmente (exportar → importar) — "deu certo"
+- [x] Vault Obsidian atualizado
+- [x] Review com o usuário

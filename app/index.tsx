@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clock3,
   Plus,
+  Settings,
   Store,
   X,
 } from 'lucide-react-native';
@@ -195,10 +196,15 @@ export default function IndexScreen() {
             <Text style={styles.eyebrow}>BOM DIA, PROMOTOR</Text>
             <Text style={styles.title}>Sua validade{`\n`}sob controle.</Text>
           </View>
-          <Pressable style={styles.bellButton} accessibilityLabel="Notificações" accessibilityRole="button" onPress={() => router.push('/notifications')}>
-            <Bell size={21} color={colors.plum} strokeWidth={2.2} />
-            {hasUpcomingReminder && <View style={styles.notificationDot} />}
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable style={styles.bellButton} accessibilityLabel="Backup" accessibilityRole="button" onPress={() => router.push('/backup')}>
+              <Settings size={21} color={colors.plum} strokeWidth={2.2} />
+            </Pressable>
+            <Pressable style={styles.bellButton} accessibilityLabel="Notificações" accessibilityRole="button" onPress={() => router.push('/notifications')}>
+              <Bell size={21} color={colors.plum} strokeWidth={2.2} />
+              {hasUpcomingReminder && <View style={styles.notificationDot} />}
+            </Pressable>
+          </View>
         </View>
 
         <Pressable
@@ -354,6 +360,7 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25 },
+  headerActions: { flexDirection: 'row', gap: 10 },
   eyebrow: { color: colors.olive, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginBottom: 7 },
   title: { color: colors.ink, fontSize: 32, lineHeight: 35, fontWeight: '700', letterSpacing: -0.5 },
   bellButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, justifyContent: 'center', alignItems: 'center' },

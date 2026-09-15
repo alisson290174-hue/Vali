@@ -98,3 +98,12 @@ O app não tem nuvem, servidor, login ou sincronização — é 100% local, isol
 - **Não sobrevive** a desinstalar o app, formatar o aparelho, ou trocar de aparelho sem um backup manual.
 
 Essa é a motivação direta da Fase 3 do roadmap (exportar/importar backup, ver [`tasks/todo-ajustes-finos.md`](../tasks/todo-ajustes-finos.md)): como é a única rede de segurança contra perda de dados, o fluxo precisa ser o mais simples possível — idealmente um toque só pra exportar (direto pra folha de compartilhamento nativa) e um toque só pra importar (escolher arquivo, confirmar).
+
+## Backup: exportar/importar (v0.3.0)
+
+Implementado em `lib/backup.ts` + `app/backup.tsx`, acessível por um ícone na home:
+
+- **Exportar** (`exportBackup`) serializa todos os itens num JSON (com número de versão do formato e data de exportação), escreve num arquivo local via a API `File`/`Paths` do `expo-file-system`, e abre a folha de compartilhamento nativa (`expo-sharing`) — um toque, sem tela intermediária. O arquivo usa sempre o mesmo nome dentro do diretório de cache, então cada exportação sobrescreve a anterior em vez de acumular lixo.
+- **Importar** foi dividido em duas funções (`pickAndParseBackup` + `applyBackup`) em vez de uma função só. Motivo: a tela precisa mostrar "isso vai adicionar N itens" *antes* de perguntar se o usuário confirma — e só dá pra saber o N depois de já ter lido e validado o arquivo. Separar "ler e validar" de "efetivamente inserir" resolve isso sem duas idas ao seletor de arquivos.
+- A importação é **sempre aditiva**: cada item do backup vira um registro novo (id novo gerado na hora), nunca sobrescreve nada que já existia no aparelho. Um arquivo inválido/malformado é rejeitado por inteiro antes de qualquer inserção começar (a validação roda sobre o arquivo todo primeiro) — ou importa tudo, ou não importa nada.
+- Detalhe fácil de esquecer: os campos `earlyNotificationId`/`finalNotificationId` guardados no backup **não** significam nada no aparelho de destino (são referências a notificações agendadas no sistema operacional de outro momento/aparelho). Por isso, depois de inserir cada item, o import chama `syncRemindersForItem` (a mesma função usada ao cadastrar/editar um item manualmente) pra agendar notificações de verdade nesse aparelho, em vez de só copiar ids que não apontam pra nada.

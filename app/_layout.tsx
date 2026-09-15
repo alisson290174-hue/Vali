@@ -48,6 +48,17 @@ export default function RootLayout() {
             headerTitleStyle: { color: colors.ink },
           }}
         />
+        <Stack.Screen
+          name="backup"
+          options={{
+            headerShown: true,
+            title: 'Backup',
+            headerBackTitle: 'Voltar',
+            headerStyle: { backgroundColor: colors.cream },
+            headerTintColor: colors.plum,
+            headerTitleStyle: { color: colors.ink },
+          }}
+        />
       </Stack>
     </SafeAreaProvider>
   );
