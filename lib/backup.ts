@@ -8,13 +8,13 @@ import { syncRemindersForItem } from './notifications';
 const BACKUP_FORMAT_VERSION = 1;
 const BACKUP_FILE_NAME = 'vali-backup.json';
 
-type BackupFile = {
+export type BackupFile = {
   formatVersion: number;
   exportedAt: string;
   items: Item[];
 };
 
-function isBackupFile(value: unknown): value is BackupFile {
+export function isBackupFile(value: unknown): value is BackupFile {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Record<string, unknown>;
   return (
