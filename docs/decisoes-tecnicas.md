@@ -107,3 +107,23 @@ Implementado em `lib/backup.ts` + `app/backup.tsx`, acessível por um ícone na 
 - **Importar** foi dividido em duas funções (`pickAndParseBackup` + `applyBackup`) em vez de uma função só. Motivo: a tela precisa mostrar "isso vai adicionar N itens" *antes* de perguntar se o usuário confirma — e só dá pra saber o N depois de já ter lido e validado o arquivo. Separar "ler e validar" de "efetivamente inserir" resolve isso sem duas idas ao seletor de arquivos.
 - A importação é **sempre aditiva**: cada item do backup vira um registro novo (id novo gerado na hora), nunca sobrescreve nada que já existia no aparelho. Um arquivo inválido/malformado é rejeitado por inteiro antes de qualquer inserção começar (a validação roda sobre o arquivo todo primeiro) — ou importa tudo, ou não importa nada.
 - Detalhe fácil de esquecer: os campos `earlyNotificationId`/`finalNotificationId` guardados no backup **não** significam nada no aparelho de destino (são referências a notificações agendadas no sistema operacional de outro momento/aparelho). Por isso, depois de inserir cada item, o import chama `syncRemindersForItem` (a mesma função usada ao cadastrar/editar um item manualmente) pra agendar notificações de verdade nesse aparelho, em vez de só copiar ids que não apontam pra nada.
+
+## Tela de lojas: agrupamento derivado, sem tabela nova
+
+`store` sempre foi um campo de texto livre no item, não uma entidade própria (sem tabela `stores`, sem chave estrangeira). A tela de lojas (`app/stores.tsx`) segue a mesma filosofia já usada pra urgência e contagem de lojas: em vez de normalizar o dado no banco, agrupa os itens em memória a partir do texto (`lib/records.ts`: `groupByStore`), na hora de exibir. "Detalhes da loja" reaproveita `app/all-items.tsx` com um novo parâmetro de rota (`?store=Nome`), no mesmo padrão já usado pelo filtro `Historico` — evita criar uma tela de detalhe duplicada só pra repetir a mesma lista filtrada.
+
+Efeito colateral aceito conscientemente: texto livre sem normalização permite duplicação por digitação inconsistente (`"Mercado Central"` vs `"mercado central"` viram grupos diferentes). Resolvido no nível de UX, não de schema: autocompletar (abaixo).
+
+## Autocompletar loja com nomes já cadastrados
+
+`ItemForm` ganhou um prop `knownStores: string[]` (calculado com `lib/records.ts`: `listStoreNames`, a partir dos itens já carregados nas telas de cadastro/edição). Ao focar ou digitar no campo Loja, aparecem até 5 sugestões que contêm o texto digitado (case-insensitive); tocar numa sugestão substitui o texto pelo nome exato já usado, evitando criar uma variação nova.
+
+## Bug real: sugestão aparecia mas não recebia toque
+
+**Sintoma:** a lista de sugestões renderizava normalmente, mas tocar numa sugestão não fazia nada — nem sempre, só quando o teclado estava aberto (o que é sempre o caso nesse fluxo, já que a sugestão só aparece enquanto o campo está focado).
+
+**Causa:** comportamento padrão do `ScrollView` do React Native — com o teclado aberto, o primeiro toque em qualquer elemento que não seja o campo de texto focado é interceptado pra fechar o teclado, em vez de ser repassado ao componente tocado (`keyboardShouldPersistTaps` tem valor padrão `"never"`).
+
+**Correção:** `keyboardShouldPersistTaps="handled"` nos `ScrollView` que envolvem o `ItemForm` (cadastro e edição) — faz o toque em qualquer elemento que já trata o próprio toque (como o `Pressable` da sugestão) ser repassado normalmente, sem fechar o teclado primeiro.
+
+**Lição:** qualquer elemento tocável colocado dentro de um formulário com campos de texto (autocompletar, chips, botões próximos a um input) precisa ser testado com o teclado aberto — o comportamento padrão do scroll pode silenciosamente engolir o toque sem nenhum erro aparente.
