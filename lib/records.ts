@@ -1,4 +1,5 @@
-import { differenceInCalendarDays, parse } from 'date-fns';
+import { differenceInCalendarDays, format, parse } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import type { Item } from '../db/types';
 
 export function daysUntil(expiryDate: string): number {
@@ -114,6 +115,22 @@ export function computeStats(records: Item[]): Stats {
     lojas: countDistinctStores(records),
     taxaResolvidosATempo: finalizados > 0 ? concluidos / finalizados : null,
   };
+}
+
+export function buildStoreShareText(store: string, pendingItems: Item[]): string {
+  const today = format(new Date(), 'dd/MM/yyyy', { locale: ptBR });
+  const header = `Itens pendentes — ${store} (${today})`;
+
+  if (pendingItems.length === 0) {
+    return `${header}\n\nNenhum item pendente nessa loja no momento.`;
+  }
+
+  const sorted = sortByUrgency(pendingItems);
+  const lines = sorted.map(
+    (item) => `• ${item.item} — vence ${item.expiryDate} (${urgencyLabel(daysUntil(item.expiryDate))})`
+  );
+  const footer = `${pendingItems.length} ${pendingItems.length === 1 ? 'item' : 'itens'} no total.`;
+  return [header, '', ...lines, '', footer].join('\n');
 }
 
 export function filterByCriteria(records: Item[], filter: string | undefined): Item[] {

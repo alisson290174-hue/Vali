@@ -1,12 +1,12 @@
 import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
-import { Search, X } from 'lucide-react-native';
+import { Search, Share2, X } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExpiryRow } from '../components/ExpiryRow';
 import { listItems } from '../db/items';
 import type { Item } from '../db/types';
-import { filterByCriteria, sortByUrgency } from '../lib/records';
+import { buildStoreShareText, filterByCriteria, sortByUrgency } from '../lib/records';
 import { colors } from '../lib/theme';
 
 export default function AllItemsScreen() {
@@ -16,9 +16,30 @@ export default function AllItemsScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [query, setQuery] = useState('');
 
+  function handleShareStore() {
+    if (!store) return;
+    const pending = records.filter((record) => record.store?.trim() === store && record.status === 'Pendente');
+    Share.share({ message: buildStoreShareText(store, pending) });
+  }
+
   useEffect(() => {
-    navigation.setOptions({ title: store ? store : filter === 'Historico' ? 'Histórico' : 'Todos os itens' });
-  }, [navigation, filter, store]);
+    navigation.setOptions({
+      title: store ? store : filter === 'Historico' ? 'Histórico' : 'Todos os itens',
+      headerRight: store
+        ? () => (
+            <Pressable
+              onPress={handleShareStore}
+              accessibilityRole="button"
+              accessibilityLabel={`Compartilhar itens pendentes de ${store}`}
+              hitSlop={8}
+            >
+              <Share2 size={20} color={colors.plum} />
+            </Pressable>
+          )
+        : undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, filter, store, records]);
 
   useFocusEffect(
     useCallback(() => {

@@ -1,5 +1,6 @@
 import type { Item } from '../db/types';
 import {
+  buildStoreShareText,
   computeStats,
   countDistinctStores,
   daysUntil,
@@ -230,6 +231,33 @@ describe('computeStats', () => {
     const stats = computeStats([]);
     expect(stats.total).toBe(0);
     expect(stats.taxaResolvidosATempo).toBeNull();
+  });
+});
+
+describe('buildStoreShareText', () => {
+  it('lista os itens ordenados por urgencia, com data e rotulo de urgencia', () => {
+    const items = [
+      makeItem({ item: 'Item B', expiryDate: '30/09/2026' }),
+      makeItem({ item: 'Item A', expiryDate: '16/09/2026' }),
+    ];
+    const text = buildStoreShareText('Loja X', items);
+    expect(text).toContain('Itens pendentes — Loja X');
+    expect(text).toContain('2 itens no total.');
+    const indexA = text.indexOf('Item A');
+    const indexB = text.indexOf('Item B');
+    expect(indexA).toBeGreaterThan(-1);
+    expect(indexB).toBeGreaterThan(indexA);
+    expect(text).toContain('Item A — vence 16/09/2026 (Urgente)');
+  });
+
+  it('usa singular quando so tem 1 item', () => {
+    const text = buildStoreShareText('Loja X', [makeItem({ item: 'Item Unico' })]);
+    expect(text).toContain('1 item no total.');
+  });
+
+  it('avisa quando nao ha itens pendentes', () => {
+    const text = buildStoreShareText('Loja X', []);
+    expect(text).toContain('Nenhum item pendente nessa loja no momento.');
   });
 });
 
