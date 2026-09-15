@@ -283,7 +283,7 @@ export default function IndexScreen() {
                 <X size={20} color={colors.ink} />
               </Pressable>
             </View>
-            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <ItemForm
                 itemName={itemName}
                 onChangeItemName={setItemName}
