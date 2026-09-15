@@ -29,6 +29,7 @@ type ItemFormProps = {
   photoUri: string | null;
   onPickPhoto: () => void;
   autoFocusItem?: boolean;
+  knownStores?: string[];
 };
 
 export function ItemForm({
@@ -51,10 +52,12 @@ export function ItemForm({
   photoUri,
   onPickPhoto,
   autoFocusItem,
+  knownStores,
 }: ItemFormProps) {
   const [reminderText, setReminderText] = useState(reminderDaysBefore ? String(reminderDaysBefore) : '');
   const [reminderCapWarning, setReminderCapWarning] = useState(false);
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
+  const [isStoreFocused, setIsStoreFocused] = useState(false);
   const previousDateDigitsLength = useRef(expiryDate.replace(/\D/g, '').length);
 
   useEffect(() => {
@@ -104,6 +107,11 @@ export function ItemForm({
     onChangeReminderDaysBefore(days);
   }
 
+  const storeSuggestions = (knownStores ?? [])
+    .filter((name) => name !== store && name.toLowerCase().includes(store.trim().toLowerCase()))
+    .slice(0, 5);
+  const showStoreSuggestions = isStoreFocused && storeSuggestions.length > 0;
+
   const showDateError = expiryDate.length === 10 && !isValidExpiryDate(expiryDate);
   const daysRemaining = isValidExpiryDate(expiryDate) ? daysUntil(expiryDate) : null;
   const showExceedsRemainingWarning = !reminderCapWarning && reminderExceedsRemaining(expiryDate, reminderDaysBefore);
@@ -125,7 +133,30 @@ export function ItemForm({
       {showDateError && <Text style={styles.errorText}>Essa data não existe. Confira o dia e o mês.</Text>}
 
       <Text style={styles.inputLabel}>Loja (opcional)</Text>
-      <TextInput value={store} onChangeText={onChangeStore} placeholder="Ex.: Supermercado Central" placeholderTextColor={colors.muted} style={styles.input} />
+      <TextInput
+        value={store}
+        onChangeText={onChangeStore}
+        onFocus={() => setIsStoreFocused(true)}
+        onBlur={() => setTimeout(() => setIsStoreFocused(false), 150)}
+        placeholder="Ex.: Supermercado Central"
+        placeholderTextColor={colors.muted}
+        style={styles.input}
+      />
+      {showStoreSuggestions && (
+        <View style={styles.storeSuggestions}>
+          {storeSuggestions.map((name, index) => (
+            <Pressable
+              key={name}
+              style={[styles.storeSuggestionRow, index > 0 && styles.storeSuggestionDivider]}
+              onPress={() => onChangeStore(name)}
+              accessibilityRole="button"
+              accessibilityLabel={`Usar loja já cadastrada: ${name}`}
+            >
+              <Text style={styles.storeSuggestionText}>{name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       <Text style={styles.inputLabel}>Quantidade (opcional)</Text>
       <TextInput value={quantity} onChangeText={onChangeQuantity} placeholder="Ex.: 8" placeholderTextColor={colors.muted} style={styles.input} keyboardType="number-pad" />
@@ -237,6 +268,10 @@ const styles = StyleSheet.create({
   input: { height: 50, borderRadius: 13, backgroundColor: colors.white, paddingHorizontal: 15, color: colors.ink, fontSize: 15, marginBottom: 16 },
   inputError: { borderWidth: 1.5, borderColor: colors.orange, marginBottom: 6 },
   errorText: { color: colors.orange, fontSize: 12, fontWeight: '600', marginBottom: 16, marginTop: -2 },
+  storeSuggestions: { backgroundColor: colors.white, borderRadius: 13, marginTop: -10, marginBottom: 16, overflow: 'hidden' },
+  storeSuggestionRow: { paddingHorizontal: 15, paddingVertical: 12 },
+  storeSuggestionDivider: { borderTopWidth: 1, borderTopColor: colors.cream },
+  storeSuggestionText: { color: colors.ink, fontSize: 14 },
   photoButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 16 },
   photoPreviewButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 10 },
   photoThumbnail: { width: 32, height: 32, borderRadius: 8 },

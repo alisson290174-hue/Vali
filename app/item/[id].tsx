@@ -5,11 +5,11 @@ import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollVi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ItemForm } from '../../components/ItemForm';
 import { StatusIcon } from '../../components/StatusIcon';
-import { deleteItem, getItem, updateItem } from '../../db/items';
+import { deleteItem, getItem, listItems, updateItem } from '../../db/items';
 import type { ItemStatus } from '../../db/types';
 import { cancelReminder, syncRemindersForItem } from '../../lib/notifications';
 import { pickPhoto } from '../../lib/photo';
-import { daysUntil, isValidExpiryDate, reminderExceedsRemaining } from '../../lib/records';
+import { daysUntil, isValidExpiryDate, listStoreNames, reminderExceedsRemaining } from '../../lib/records';
 import { STATUS_META } from '../../lib/status';
 import { colors } from '../../lib/theme';
 
@@ -32,6 +32,7 @@ export default function ItemDetailScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [status, setStatus] = useState<ItemStatus>('Pendente');
   const [statusSavedHint, setStatusSavedHint] = useState(false);
+  const [storeNames, setStoreNames] = useState<string[]>([]);
   const statusHintTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notificationIdsRef = useRef<{ early: string | null; final: string | null }>({ early: null, final: null });
   const navigation = useNavigation();
@@ -91,6 +92,10 @@ export default function ItemDetailScreen() {
       isMounted = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    listItems().then((items) => setStoreNames(listStoreNames(items)));
+  }, []);
 
   useEffect(() => {
     const initial = initialValuesRef.current;
@@ -249,6 +254,7 @@ export default function ItemDetailScreen() {
             onChangeExpiryDate={setExpiryDate}
             store={store}
             onChangeStore={setStore}
+            knownStores={storeNames}
             quantity={quantity}
             onChangeQuantity={setQuantity}
             brand={brand}

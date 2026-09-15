@@ -54,6 +54,13 @@ export function countDistinctStores(records: Item[]): number {
   return new Set(stores).size;
 }
 
+export function listStoreNames(records: Item[]): string[] {
+  const names = records
+    .map((record) => record.store?.trim())
+    .filter((store): store is string => !!store);
+  return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
 export type StoreGroup = {
   store: string;
   items: Item[];

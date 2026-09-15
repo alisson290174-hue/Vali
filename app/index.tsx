@@ -31,7 +31,7 @@ import { ItemForm } from '../components/ItemForm';
 import { insertItem, listItems, seedIfEmpty } from '../db/items';
 import type { Item } from '../db/types';
 import { colors } from '../lib/theme';
-import { countDistinctStores, daysUntil, filterByCriteria, isValidExpiryDate, reminderExceedsRemaining, sortByUrgency } from '../lib/records';
+import { countDistinctStores, daysUntil, filterByCriteria, isValidExpiryDate, listStoreNames, reminderExceedsRemaining, sortByUrgency } from '../lib/records';
 import { pickPhoto } from '../lib/photo';
 import { getNextReminder, syncRemindersForItem } from '../lib/notifications';
 
@@ -291,6 +291,7 @@ export default function IndexScreen() {
                 onChangeExpiryDate={setExpiryDate}
                 store={store}
                 onChangeStore={setStore}
+                knownStores={listStoreNames(records)}
                 quantity={quantity}
                 onChangeQuantity={setQuantity}
                 brand={brand}
