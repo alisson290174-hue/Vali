@@ -1,5 +1,6 @@
 import type { Item } from '../db/types';
 import {
+  computeStats,
   countDistinctStores,
   daysUntil,
   filterByCriteria,
@@ -193,6 +194,42 @@ describe('groupByStore', () => {
     const lojaA = groups.find((group) => group.store === 'Loja A')!;
     expect(lojaA.items).toHaveLength(3);
     expect(lojaA.urgentCount).toBe(1);
+  });
+});
+
+describe('computeStats', () => {
+  it('conta cada status e calcula a taxa de itens tratados a tempo', () => {
+    const records = [
+      makeItem({ status: 'Pendente' }),
+      makeItem({ status: 'Pendente' }),
+      makeItem({ status: 'Resolvido' }),
+      makeItem({ status: 'Retirado' }),
+      makeItem({ status: 'Trocado' }),
+      makeItem({ status: 'Vencido' }),
+      makeItem({ store: 'Loja A' }),
+      makeItem({ store: 'Loja B' }),
+    ];
+    const stats = computeStats(records);
+    expect(stats.total).toBe(8);
+    expect(stats.pendentes).toBe(4); // as duas primeiras + as duas com loja (status default Pendente)
+    expect(stats.resolvidos).toBe(1);
+    expect(stats.retirados).toBe(1);
+    expect(stats.trocados).toBe(1);
+    expect(stats.vencidos).toBe(1);
+    expect(stats.lojas).toBe(2);
+    // finalizados = 3 concluidos + 1 vencido = 4; taxa = 3/4
+    expect(stats.taxaResolvidosATempo).toBeCloseTo(0.75);
+  });
+
+  it('retorna taxa nula quando nenhum item foi finalizado ainda', () => {
+    const stats = computeStats([makeItem({ status: 'Pendente' })]);
+    expect(stats.taxaResolvidosATempo).toBeNull();
+  });
+
+  it('lida com lista vazia', () => {
+    const stats = computeStats([]);
+    expect(stats.total).toBe(0);
+    expect(stats.taxaResolvidosATempo).toBeNull();
   });
 });
 

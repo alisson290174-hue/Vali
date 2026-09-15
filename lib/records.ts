@@ -85,6 +85,37 @@ export function groupByStore(records: Item[]): StoreGroup[] {
     .sort((a, b) => a.store.localeCompare(b.store, 'pt-BR'));
 }
 
+export type Stats = {
+  total: number;
+  pendentes: number;
+  resolvidos: number;
+  retirados: number;
+  trocados: number;
+  vencidos: number;
+  lojas: number;
+  taxaResolvidosATempo: number | null;
+};
+
+export function computeStats(records: Item[]): Stats {
+  const pendentes = records.filter((record) => record.status === 'Pendente').length;
+  const resolvidos = records.filter((record) => record.status === 'Resolvido').length;
+  const retirados = records.filter((record) => record.status === 'Retirado').length;
+  const trocados = records.filter((record) => record.status === 'Trocado').length;
+  const vencidos = records.filter((record) => record.status === 'Vencido').length;
+  const concluidos = resolvidos + retirados + trocados;
+  const finalizados = concluidos + vencidos;
+  return {
+    total: records.length,
+    pendentes,
+    resolvidos,
+    retirados,
+    trocados,
+    vencidos,
+    lojas: countDistinctStores(records),
+    taxaResolvidosATempo: finalizados > 0 ? concluidos / finalizados : null,
+  };
+}
+
 export function filterByCriteria(records: Item[], filter: string | undefined): Item[] {
   return records.filter((record) => {
     const days = daysUntil(record.expiryDate);

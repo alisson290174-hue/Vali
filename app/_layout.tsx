@@ -60,6 +60,17 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="stats"
+          options={{
+            headerShown: true,
+            title: 'Estatísticas',
+            headerBackTitle: 'Voltar',
+            headerStyle: { backgroundColor: colors.cream },
+            headerTintColor: colors.plum,
+            headerTitleStyle: { color: colors.ink },
+          }}
+        />
+        <Stack.Screen
           name="backup"
           options={{
             headerShown: true,

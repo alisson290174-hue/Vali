@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import {
   AlertTriangle,
   Archive,
+  BarChart3,
   Bell,
   ChevronRight,
   Clock3,
@@ -197,6 +198,9 @@ export default function IndexScreen() {
             <Text style={styles.title}>Sua validade{`\n`}sob controle.</Text>
           </View>
           <View style={styles.headerActions}>
+            <Pressable style={styles.bellButton} accessibilityLabel="Estatísticas" accessibilityRole="button" onPress={() => router.push('/stats')}>
+              <BarChart3 size={21} color={colors.plum} strokeWidth={2.2} />
+            </Pressable>
             <Pressable style={styles.bellButton} accessibilityLabel="Backup" accessibilityRole="button" onPress={() => router.push('/backup')}>
               <Settings size={21} color={colors.plum} strokeWidth={2.2} />
             </Pressable>
