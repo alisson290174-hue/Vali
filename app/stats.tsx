@@ -1,10 +1,10 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listItems } from '../db/items';
 import { computeStats, type Stats } from '../lib/records';
-import { colors } from '../lib/theme';
+import { useTheme, type ThemeColors } from '../lib/theme';
 
 const EMPTY_STATS: Stats = {
   total: 0,
@@ -17,7 +17,17 @@ const EMPTY_STATS: Stats = {
   taxaResolvidosATempo: null,
 };
 
-function Card({ label, value, tone }: { label: string; value: number | string; tone?: 'orange' }) {
+function Card({
+  label,
+  value,
+  tone,
+  styles,
+}: {
+  label: string;
+  value: number | string;
+  tone?: 'orange';
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.card}>
       <Text style={[styles.cardValue, tone === 'orange' && styles.cardValueOrange]}>{value}</Text>
@@ -27,6 +37,8 @@ function Card({ label, value, tone }: { label: string; value: number | string; t
 }
 
 export default function StatsScreen() {
+  const colors = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [stats, setStats] = useState<Stats>(EMPTY_STATS);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -60,18 +72,18 @@ export default function StatsScreen() {
       >
         <Text style={styles.sectionTitle}>Visão geral</Text>
         <View style={styles.grid}>
-          <Card label="Itens cadastrados" value={stats.total} />
-          <Card label="Pendentes agora" value={stats.pendentes} />
-          <Card label="Lojas cadastradas" value={stats.lojas} />
-          <Card label="Vencidos sem ação" value={stats.vencidos} tone={stats.vencidos > 0 ? 'orange' : undefined} />
+          <Card styles={styles} label="Itens cadastrados" value={stats.total} />
+          <Card styles={styles} label="Pendentes agora" value={stats.pendentes} />
+          <Card styles={styles} label="Lojas cadastradas" value={stats.lojas} />
+          <Card styles={styles} label="Vencidos sem ação" value={stats.vencidos} tone={stats.vencidos > 0 ? 'orange' : undefined} />
         </View>
 
         <Text style={styles.sectionTitle}>Como os itens terminaram</Text>
         <View style={styles.grid}>
-          <Card label="Resolvidos" value={stats.resolvidos} />
-          <Card label="Retirados" value={stats.retirados} />
-          <Card label="Trocados" value={stats.trocados} />
-          <Card label="Vencidos" value={stats.vencidos} tone={stats.vencidos > 0 ? 'orange' : undefined} />
+          <Card styles={styles} label="Resolvidos" value={stats.resolvidos} />
+          <Card styles={styles} label="Retirados" value={stats.retirados} />
+          <Card styles={styles} label="Trocados" value={stats.trocados} />
+          <Card styles={styles} label="Vencidos" value={stats.vencidos} tone={stats.vencidos > 0 ? 'orange' : undefined} />
         </View>
 
         <View style={styles.rateCard}>
@@ -86,23 +98,25 @@ export default function StatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.cream },
-  content: { paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 },
-  sectionTitle: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 12, marginTop: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
-  card: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    backgroundColor: colors.white,
-    borderRadius: 17,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-  },
-  cardValue: { color: colors.plum, fontSize: 28, fontWeight: '700', marginBottom: 4 },
-  cardValueOrange: { color: colors.orange },
-  cardLabel: { color: colors.muted, fontSize: 12 },
-  rateCard: { backgroundColor: colors.plumWash, borderRadius: 17, padding: 18, marginTop: 12 },
-  rateValue: { color: colors.plum, fontSize: 32, fontWeight: '700', marginBottom: 6 },
-  rateLabel: { color: colors.ink, fontSize: 12, lineHeight: 18 },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.cream },
+    content: { paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 },
+    sectionTitle: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 12, marginTop: 8 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
+    card: {
+      flexBasis: '47%',
+      flexGrow: 1,
+      backgroundColor: colors.white,
+      borderRadius: 17,
+      paddingVertical: 18,
+      paddingHorizontal: 16,
+    },
+    cardValue: { color: colors.plum, fontSize: 28, fontWeight: '700', marginBottom: 4 },
+    cardValueOrange: { color: colors.orange },
+    cardLabel: { color: colors.muted, fontSize: 12 },
+    rateCard: { backgroundColor: colors.plumWash, borderRadius: 17, padding: 18, marginTop: 12 },
+    rateValue: { color: colors.plum, fontSize: 32, fontWeight: '700', marginBottom: 6 },
+    rateLabel: { color: colors.ink, fontSize: 12, lineHeight: 18 },
+  });
+}

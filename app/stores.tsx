@@ -1,15 +1,17 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronRight, Store } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listItems } from '../db/items';
 import type { Item } from '../db/types';
 import { groupByStore, type StoreGroup } from '../lib/records';
-import { colors } from '../lib/theme';
+import { useTheme, type ThemeColors } from '../lib/theme';
 
 export default function StoresScreen() {
   const router = useRouter();
+  const colors = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [groups, setGroups] = useState<StoreGroup[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -73,15 +75,17 @@ export default function StoresScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.cream },
-  content: { paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 },
-  row: { backgroundColor: colors.white, borderRadius: 17, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.plumWash, justifyContent: 'center', alignItems: 'center' },
-  rowMain: { flex: 1, minWidth: 0 },
-  rowName: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 4 },
-  rowCount: { color: colors.muted, fontSize: 12 },
-  urgentBadge: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: colors.orangeWash, justifyContent: 'center', alignItems: 'center' },
-  urgentBadgeText: { color: colors.orange, fontSize: 11, fontWeight: '700' },
-  emptyText: { color: colors.muted, textAlign: 'center', padding: 25, lineHeight: 20 },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.cream },
+    content: { paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 },
+    row: { backgroundColor: colors.white, borderRadius: 17, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    rowIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.plumWash, justifyContent: 'center', alignItems: 'center' },
+    rowMain: { flex: 1, minWidth: 0 },
+    rowName: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 4 },
+    rowCount: { color: colors.muted, fontSize: 12 },
+    urgentBadge: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: colors.orangeWash, justifyContent: 'center', alignItems: 'center' },
+    urgentBadgeText: { color: colors.orange, fontSize: 11, fontWeight: '700' },
+    emptyText: { color: colors.muted, textAlign: 'center', padding: 25, lineHeight: 20 },
+  });
+}

@@ -1,17 +1,19 @@
 import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Search, Share2, X } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExpiryRow } from '../components/ExpiryRow';
 import { listItems } from '../db/items';
 import type { Item } from '../db/types';
 import { buildStoreShareText, filterByCriteria, sortByUrgency } from '../lib/records';
-import { colors } from '../lib/theme';
+import { useTheme, type ThemeColors } from '../lib/theme';
 
 export default function AllItemsScreen() {
   const { filter, store } = useLocalSearchParams<{ filter?: string; store?: string }>();
   const navigation = useNavigation();
+  const colors = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [records, setRecords] = useState<Item[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [query, setQuery] = useState('');
@@ -39,7 +41,7 @@ export default function AllItemsScreen() {
         : undefined,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, filter, store, records]);
+  }, [navigation, filter, store, records, colors]);
 
   useFocusEffect(
     useCallback(() => {
@@ -106,20 +108,22 @@ export default function AllItemsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.cream },
-  content: { paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 },
-  emptyText: { color: colors.muted, textAlign: 'center', padding: 25 },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.white,
-    borderRadius: 13,
-    paddingHorizontal: 14,
-    height: 46,
-    marginHorizontal: 22,
-    marginTop: 12,
-  },
-  searchInput: { flex: 1, color: colors.ink, fontSize: 14, height: '100%' },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.cream },
+    content: { paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 },
+    emptyText: { color: colors.muted, textAlign: 'center', padding: 25 },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.white,
+      borderRadius: 13,
+      paddingHorizontal: 14,
+      height: 46,
+      marginHorizontal: 22,
+      marginTop: 12,
+    },
+    searchInput: { flex: 1, color: colors.ink, fontSize: 14, height: '100%' },
+  });
+}

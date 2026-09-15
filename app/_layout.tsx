@@ -1,27 +1,27 @@
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { colors } from '../lib/theme';
+import { useTheme } from '../lib/theme';
 import { configureNotificationHandler, useNotificationDeepLink } from '../lib/notifications';
 
 configureNotificationHandler();
 
 export default function RootLayout() {
   useNotificationDeepLink();
+  const colors = useTheme();
   return (
     <SafeAreaProvider>
-      <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
+      <Stack
+        initialRouteName="index"
+        screenOptions={{
+          headerShown: false,
+          headerBackTitle: 'Voltar',
+          headerStyle: { backgroundColor: colors.cream },
+          headerTintColor: colors.plum,
+          headerTitleStyle: { color: colors.ink },
+        }}
+      >
         <Stack.Screen name="index" />
-        <Stack.Screen
-          name="all-items"
-          options={{
-            headerShown: true,
-            title: 'Todos os itens',
-            headerBackTitle: 'Voltar',
-            headerStyle: { backgroundColor: colors.cream },
-            headerTintColor: colors.plum,
-            headerTitleStyle: { color: colors.ink },
-          }}
-        />
+        <Stack.Screen name="all-items" options={{ headerShown: true, title: 'Todos os itens' }} />
         <Stack.Screen
           name="item/[id]"
           options={{
@@ -32,55 +32,12 @@ export default function RootLayout() {
             // alterações não salvas — o native-stack não suporta bem cancelar
             // uma remoção de tela já iniciada pelo gesto.
             gestureEnabled: false,
-            headerStyle: { backgroundColor: colors.cream },
-            headerTintColor: colors.plum,
-            headerTitleStyle: { color: colors.ink },
           }}
         />
-        <Stack.Screen
-          name="notifications"
-          options={{
-            headerShown: true,
-            title: 'Notificações',
-            headerBackTitle: 'Voltar',
-            headerStyle: { backgroundColor: colors.cream },
-            headerTintColor: colors.plum,
-            headerTitleStyle: { color: colors.ink },
-          }}
-        />
-        <Stack.Screen
-          name="stores"
-          options={{
-            headerShown: true,
-            title: 'Lojas',
-            headerBackTitle: 'Voltar',
-            headerStyle: { backgroundColor: colors.cream },
-            headerTintColor: colors.plum,
-            headerTitleStyle: { color: colors.ink },
-          }}
-        />
-        <Stack.Screen
-          name="stats"
-          options={{
-            headerShown: true,
-            title: 'Estatísticas',
-            headerBackTitle: 'Voltar',
-            headerStyle: { backgroundColor: colors.cream },
-            headerTintColor: colors.plum,
-            headerTitleStyle: { color: colors.ink },
-          }}
-        />
-        <Stack.Screen
-          name="backup"
-          options={{
-            headerShown: true,
-            title: 'Configurações',
-            headerBackTitle: 'Voltar',
-            headerStyle: { backgroundColor: colors.cream },
-            headerTintColor: colors.plum,
-            headerTitleStyle: { color: colors.ink },
-          }}
-        />
+        <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notificações' }} />
+        <Stack.Screen name="stores" options={{ headerShown: true, title: 'Lojas' }} />
+        <Stack.Screen name="stats" options={{ headerShown: true, title: 'Estatísticas' }} />
+        <Stack.Screen name="backup" options={{ headerShown: true, title: 'Configurações' }} />
       </Stack>
     </SafeAreaProvider>
   );

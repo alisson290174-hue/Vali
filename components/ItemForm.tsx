@@ -1,11 +1,11 @@
 import { Camera, Expand, X } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { daysUntil, formatDateDigits, isValidExpiryDate, reminderExceedsRemaining } from '../lib/records';
+import { useTheme, type ThemeColors } from '../lib/theme';
 
 const MAX_REMINDER_DAYS_BEFORE = 99;
-import { colors } from '../lib/theme';
 
 const REMINDER_SHORTCUTS = [1, 3, 5, 7, 10];
 
@@ -54,6 +54,8 @@ export function ItemForm({
   autoFocusItem,
   knownStores,
 }: ItemFormProps) {
+  const colors = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [reminderText, setReminderText] = useState(reminderDaysBefore ? String(reminderDaysBefore) : '');
   const [reminderCapWarning, setReminderCapWarning] = useState(false);
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
@@ -263,29 +265,31 @@ export function ItemForm({
   );
 }
 
-const styles = StyleSheet.create({
-  inputLabel: { color: colors.ink, fontSize: 12, fontWeight: '700', marginBottom: 7 },
-  input: { height: 50, borderRadius: 13, backgroundColor: colors.white, paddingHorizontal: 15, color: colors.ink, fontSize: 15, marginBottom: 16 },
-  inputError: { borderWidth: 1.5, borderColor: colors.orange, marginBottom: 6 },
-  errorText: { color: colors.orange, fontSize: 12, fontWeight: '600', marginBottom: 16, marginTop: -2 },
-  storeSuggestions: { backgroundColor: colors.white, borderRadius: 13, marginTop: -10, marginBottom: 16, overflow: 'hidden' },
-  storeSuggestionRow: { paddingHorizontal: 15, paddingVertical: 12 },
-  storeSuggestionDivider: { borderTopWidth: 1, borderTopColor: colors.cream },
-  storeSuggestionText: { color: colors.ink, fontSize: 14 },
-  photoButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 16 },
-  photoPreviewButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 10 },
-  photoThumbnail: { width: 32, height: 32, borderRadius: 8 },
-  photoButtonText: { flex: 1, color: colors.plum, fontSize: 14, fontWeight: '600' },
-  photoViewerBackdrop: { flex: 1, backgroundColor: 'rgba(12, 10, 14, 0.95)' },
-  photoViewerImage: { flex: 1, width: '100%' },
-  photoViewerClose: { alignSelf: 'flex-end', margin: 16, backgroundColor: 'rgba(255,255,255,0.15)', padding: 10, borderRadius: 20 },
-  alertRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  alertHint: { color: colors.muted, fontSize: 12, maxWidth: 220 },
-  reminderBlock: { marginTop: -8, marginBottom: 20 },
-  reminderChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
-  reminderChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: colors.white },
-  reminderChipActive: { backgroundColor: colors.olive },
-  reminderChipText: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-  reminderChipTextActive: { color: colors.cream },
-  reminderHint: { color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: -8 },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    inputLabel: { color: colors.ink, fontSize: 12, fontWeight: '700', marginBottom: 7 },
+    input: { height: 50, borderRadius: 13, backgroundColor: colors.white, paddingHorizontal: 15, color: colors.ink, fontSize: 15, marginBottom: 16 },
+    inputError: { borderWidth: 1.5, borderColor: colors.orange, marginBottom: 6 },
+    errorText: { color: colors.orange, fontSize: 12, fontWeight: '600', marginBottom: 16, marginTop: -2 },
+    storeSuggestions: { backgroundColor: colors.white, borderRadius: 13, marginTop: -10, marginBottom: 16, overflow: 'hidden' },
+    storeSuggestionRow: { paddingHorizontal: 15, paddingVertical: 12 },
+    storeSuggestionDivider: { borderTopWidth: 1, borderTopColor: colors.cream },
+    storeSuggestionText: { color: colors.ink, fontSize: 14 },
+    photoButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 16 },
+    photoPreviewButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: 13, paddingHorizontal: 15, height: 50, marginBottom: 10 },
+    photoThumbnail: { width: 32, height: 32, borderRadius: 8 },
+    photoButtonText: { flex: 1, color: colors.plum, fontSize: 14, fontWeight: '600' },
+    photoViewerBackdrop: { flex: 1, backgroundColor: 'rgba(12, 10, 14, 0.95)' },
+    photoViewerImage: { flex: 1, width: '100%' },
+    photoViewerClose: { alignSelf: 'flex-end', margin: 16, backgroundColor: 'rgba(255,255,255,0.15)', padding: 10, borderRadius: 20 },
+    alertRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    alertHint: { color: colors.muted, fontSize: 12, maxWidth: 220 },
+    reminderBlock: { marginTop: -8, marginBottom: 20 },
+    reminderChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+    reminderChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: colors.white },
+    reminderChipActive: { backgroundColor: colors.olive },
+    reminderChipText: { color: colors.muted, fontSize: 12, fontWeight: '600' },
+    reminderChipTextActive: { color: colors.cream },
+    reminderHint: { color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: -8 },
+  });
+}

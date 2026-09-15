@@ -2,13 +2,13 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Bell, ChevronRight, Clock3 } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listItems } from '../db/items';
 import type { Item } from '../db/types';
 import { getNextReminder } from '../lib/notifications';
-import { colors } from '../lib/theme';
+import { useTheme, type ThemeColors } from '../lib/theme';
 
 type ReminderRow = {
   item: Item;
@@ -32,6 +32,8 @@ function buildRows(items: Item[]): ReminderRow[] {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const colors = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [rows, setRows] = useState<ReminderRow[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -99,14 +101,16 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.cream },
-  content: { paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 },
-  row: { backgroundColor: colors.white, borderRadius: 17, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.plumWash, justifyContent: 'center', alignItems: 'center' },
-  rowMain: { flex: 1, minWidth: 0 },
-  rowName: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 4 },
-  rowDateLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  rowDate: { color: colors.muted, fontSize: 12 },
-  emptyText: { color: colors.muted, textAlign: 'center', padding: 25, lineHeight: 20 },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.cream },
+    content: { paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 },
+    row: { backgroundColor: colors.white, borderRadius: 17, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    rowIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.plumWash, justifyContent: 'center', alignItems: 'center' },
+    rowMain: { flex: 1, minWidth: 0 },
+    rowName: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 4 },
+    rowDateLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    rowDate: { color: colors.muted, fontSize: 12 },
+    emptyText: { color: colors.muted, textAlign: 'center', padding: 25, lineHeight: 20 },
+  });
+}

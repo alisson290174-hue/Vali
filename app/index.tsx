@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Archive,
@@ -31,7 +31,7 @@ import { ExpiryRow } from '../components/ExpiryRow';
 import { ItemForm } from '../components/ItemForm';
 import { insertItem, listItems, seedIfEmpty } from '../db/items';
 import type { Item } from '../db/types';
-import { colors } from '../lib/theme';
+import { useTheme, type ThemeColors } from '../lib/theme';
 import { countDistinctStores, daysUntil, filterByCriteria, isValidExpiryDate, listStoreNames, reminderExceedsRemaining, sortByUrgency } from '../lib/records';
 import { pickPhoto } from '../lib/photo';
 import { getNextReminder, syncDailySummary, syncRemindersForItem } from '../lib/notifications';
@@ -45,6 +45,8 @@ const DEFAULT_REMINDER_DAYS_BEFORE = 10;
 
 export default function IndexScreen() {
   const router = useRouter();
+  const colors = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [itemName, setItemName] = useState('');
@@ -188,7 +190,7 @@ export default function IndexScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
+      <StatusBar style="auto" />
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
@@ -237,9 +239,9 @@ export default function IndexScreen() {
           <Text style={styles.sectionMeta}>{activeItems.length} ativos</Text>
         </View>
         <View style={styles.metricRow}>
-          <Metric icon={<Clock3 size={18} color={colors.orange} />} value={pad2(urgentCount)} label="Urgentes" tone="orange" onPress={() => router.push('/all-items?filter=Urgentes')} />
-          <Metric icon={<Archive size={18} color={colors.olive} />} value={pad2(historicoCount)} label="Histórico" tone="olive" onPress={() => router.push('/all-items?filter=Historico')} />
-          <Metric icon={<Store size={18} color={colors.plum} />} value={pad2(storeCount)} label="Lojas" tone="plum" onPress={() => router.push('/stores')} />
+          <Metric colors={colors} styles={styles} icon={<Clock3 size={18} color={colors.orange} />} value={pad2(urgentCount)} label="Urgentes" tone="orange" onPress={() => router.push('/all-items?filter=Urgentes')} />
+          <Metric colors={colors} styles={styles} icon={<Archive size={18} color={colors.olive} />} value={pad2(historicoCount)} label="Histórico" tone="olive" onPress={() => router.push('/all-items?filter=Historico')} />
+          <Metric colors={colors} styles={styles} icon={<Store size={18} color={colors.plum} />} value={pad2(storeCount)} label="Lojas" tone="plum" onPress={() => router.push('/stores')} />
         </View>
 
         <View style={styles.sectionHeader}>
@@ -337,12 +339,16 @@ function Metric({
   label,
   tone,
   onPress,
+  colors,
+  styles,
 }: {
   icon: React.ReactNode;
   value: string;
   label: string;
   tone: 'orange' | 'olive' | 'plum';
   onPress: () => void;
+  colors: ThemeColors;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <Pressable
@@ -358,51 +364,53 @@ function Metric({
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.cream },
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: 22,
-    paddingTop: 20,
-    paddingBottom: 110,
-  },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25 },
-  headerActions: { flexDirection: 'row', gap: 10 },
-  eyebrow: { color: colors.olive, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginBottom: 7 },
-  title: { color: colors.ink, fontSize: 32, lineHeight: 35, fontWeight: '700', letterSpacing: -0.5 },
-  bellButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, justifyContent: 'center', alignItems: 'center' },
-  notificationDot: { position: 'absolute', top: 10, right: 11, width: 7, height: 7, borderRadius: 4, backgroundColor: colors.orange, borderWidth: 1.5, borderColor: colors.white },
-  summaryCard: { height: 148, backgroundColor: colors.plum, borderRadius: 22, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, marginBottom: 28 },
-  summaryOrb: { position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: colors.plumLight, opacity: 0.25, right: -75, top: -85 },
-  summaryContent: { zIndex: 1 },
-  summaryLabel: { color: colors.oliveLight, fontSize: 11, fontWeight: '800', letterSpacing: 1.4, marginBottom: 8 },
-  summaryNumber: { color: colors.cream, fontSize: 28, fontWeight: '700', marginBottom: 3 },
-  summaryDescription: { color: '#DCCCDC', fontSize: 13 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { color: colors.ink, fontSize: 19, fontWeight: '700' },
-  sectionMeta: { color: colors.muted, fontSize: 12 },
-  linkText: { color: colors.plum, fontSize: 13, fontWeight: '700' },
-  metricRow: { flexDirection: 'row', gap: 10, marginBottom: 30 },
-  metric: { flex: 1, backgroundColor: colors.white, borderRadius: 17, padding: 13, minHeight: 102 },
-  metricIcon: { width: 33, height: 33, borderRadius: 11, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  metricValue: { color: colors.ink, fontSize: 20, fontWeight: '700' },
-  metricLabel: { color: colors.muted, fontSize: 11, marginTop: 1 },
-  filters: { flexDirection: 'row', gap: 8, marginBottom: 13 },
-  filter: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: colors.white },
-  filterActive: { backgroundColor: colors.olive },
-  filterText: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-  filterTextActive: { color: colors.cream },
-  emptyText: { color: colors.muted, textAlign: 'center', padding: 25 },
-  fab: { position: 'absolute', bottom: 24, right: 22, borderRadius: 28, backgroundColor: colors.plum, height: 54, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 5, shadowColor: colors.plum, shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
-  fabText: { color: colors.cream, fontSize: 14, fontWeight: '700' },
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(37, 35, 38, 0.35)' },
-  modalCard: { backgroundColor: colors.cream, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 30, maxHeight: '88%' },
-  modalScroll: { marginBottom: 4 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
-  modalEyebrow: { color: colors.olive, fontSize: 10, fontWeight: '800', letterSpacing: 1.3, marginBottom: 6 },
-  modalTitle: { color: colors.ink, fontSize: 22, fontWeight: '700' },
-  closeButton: { backgroundColor: colors.white, padding: 8, borderRadius: 20 },
-  saveButton: { height: 52, borderRadius: 15, backgroundColor: colors.plum, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
-  saveButtonDisabled: { opacity: 0.45 },
-  saveButtonText: { color: colors.cream, fontSize: 15, fontWeight: '700' },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.cream },
+    container: {
+      flexGrow: 1,
+      paddingHorizontal: 22,
+      paddingTop: 20,
+      paddingBottom: 110,
+    },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25 },
+    headerActions: { flexDirection: 'row', gap: 10 },
+    eyebrow: { color: colors.olive, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginBottom: 7 },
+    title: { color: colors.ink, fontSize: 32, lineHeight: 35, fontWeight: '700', letterSpacing: -0.5 },
+    bellButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, justifyContent: 'center', alignItems: 'center' },
+    notificationDot: { position: 'absolute', top: 10, right: 11, width: 7, height: 7, borderRadius: 4, backgroundColor: colors.orange, borderWidth: 1.5, borderColor: colors.white },
+    summaryCard: { height: 148, backgroundColor: colors.plum, borderRadius: 22, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, marginBottom: 28 },
+    summaryOrb: { position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: colors.plumLight, opacity: 0.25, right: -75, top: -85 },
+    summaryContent: { zIndex: 1 },
+    summaryLabel: { color: colors.oliveLight, fontSize: 11, fontWeight: '800', letterSpacing: 1.4, marginBottom: 8 },
+    summaryNumber: { color: colors.cream, fontSize: 28, fontWeight: '700', marginBottom: 3 },
+    summaryDescription: { color: '#DCCCDC', fontSize: 13 },
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    sectionTitle: { color: colors.ink, fontSize: 19, fontWeight: '700' },
+    sectionMeta: { color: colors.muted, fontSize: 12 },
+    linkText: { color: colors.plum, fontSize: 13, fontWeight: '700' },
+    metricRow: { flexDirection: 'row', gap: 10, marginBottom: 30 },
+    metric: { flex: 1, backgroundColor: colors.white, borderRadius: 17, padding: 13, minHeight: 102 },
+    metricIcon: { width: 33, height: 33, borderRadius: 11, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+    metricValue: { color: colors.ink, fontSize: 20, fontWeight: '700' },
+    metricLabel: { color: colors.muted, fontSize: 11, marginTop: 1 },
+    filters: { flexDirection: 'row', gap: 8, marginBottom: 13 },
+    filter: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: colors.white },
+    filterActive: { backgroundColor: colors.olive },
+    filterText: { color: colors.muted, fontSize: 12, fontWeight: '600' },
+    filterTextActive: { color: colors.cream },
+    emptyText: { color: colors.muted, textAlign: 'center', padding: 25 },
+    fab: { position: 'absolute', bottom: 24, right: 22, borderRadius: 28, backgroundColor: colors.plum, height: 54, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 5, shadowColor: colors.plum, shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
+    fabText: { color: colors.cream, fontSize: 14, fontWeight: '700' },
+    modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(37, 35, 38, 0.35)' },
+    modalCard: { backgroundColor: colors.cream, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 30, maxHeight: '88%' },
+    modalScroll: { marginBottom: 4 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
+    modalEyebrow: { color: colors.olive, fontSize: 10, fontWeight: '800', letterSpacing: 1.3, marginBottom: 6 },
+    modalTitle: { color: colors.ink, fontSize: 22, fontWeight: '700' },
+    closeButton: { backgroundColor: colors.white, padding: 8, borderRadius: 20 },
+    saveButton: { height: 52, borderRadius: 15, backgroundColor: colors.plum, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+    saveButtonDisabled: { opacity: 0.45 },
+    saveButtonText: { color: colors.cream, fontSize: 15, fontWeight: '700' },
+  });
+}

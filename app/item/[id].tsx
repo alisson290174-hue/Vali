@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ItemForm } from '../../components/ItemForm';
@@ -10,14 +10,17 @@ import type { ItemStatus } from '../../db/types';
 import { cancelReminder, syncRemindersForItem } from '../../lib/notifications';
 import { pickPhoto } from '../../lib/photo';
 import { daysUntil, isValidExpiryDate, listStoreNames, reminderExceedsRemaining } from '../../lib/records';
-import { STATUS_META } from '../../lib/status';
-import { colors } from '../../lib/theme';
+import { statusMeta } from '../../lib/status';
+import { useTheme, type ThemeColors } from '../../lib/theme';
 
 const STATUS_OPTIONS: ItemStatus[] = ['Pendente', 'Resolvido', 'Retirado', 'Trocado', 'Vencido'];
 
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const colors = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const meta = useMemo(() => statusMeta(colors), [colors]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -140,7 +143,7 @@ export default function ItemDetailScreen() {
         </Pressable>
       ),
     });
-  }, [navigation, handleBackPress]);
+  }, [navigation, handleBackPress, styles, colors]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
@@ -277,18 +280,18 @@ export default function ItemDetailScreen() {
             {STATUS_OPTIONS.map((option) => {
               const isActive = status === option;
               const isLockedVencido = option === 'Vencido' && !isPastDue && !isActive;
-              const meta = STATUS_META[option];
+              const optionMeta = meta[option];
               return (
                 <Pressable
                   key={option}
                   onPress={() => handleStatusChange(option)}
-                  style={[styles.statusChip, isActive && { backgroundColor: meta.bg }, isLockedVencido && styles.statusChipLocked]}
+                  style={[styles.statusChip, isActive && { backgroundColor: optionMeta.bg }, isLockedVencido && styles.statusChipLocked]}
                   accessibilityRole="button"
                   accessibilityLabel={isLockedVencido ? `Status: ${option}, disponível só depois do vencimento` : `Status: ${option}`}
                   accessibilityState={{ selected: isActive }}
                 >
-                  <StatusIcon status={option} size={14} color={isActive ? meta.text : colors.muted} />
-                  <Text style={[styles.statusChipText, isActive && { color: meta.text }]}>{option}</Text>
+                  <StatusIcon status={option} size={14} color={isActive ? optionMeta.text : colors.muted} />
+                  <Text style={[styles.statusChipText, isActive && { color: optionMeta.text }]}>{option}</Text>
                 </Pressable>
               );
             })}
@@ -314,24 +317,26 @@ export default function ItemDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.cream },
-  flex: { flex: 1 },
-  content: { padding: 22, paddingBottom: 40 },
-  loadingText: { color: colors.muted, textAlign: 'center', marginTop: 40, marginHorizontal: 22, marginBottom: 20 },
-  backButton: { alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 15, backgroundColor: colors.plum },
-  headerBackButton: { paddingHorizontal: 8, paddingVertical: 6, marginLeft: 4 },
-  backButtonText: { color: colors.cream, fontSize: 14, fontWeight: '700' },
-  inputLabel: { color: colors.ink, fontSize: 12, fontWeight: '700', marginBottom: 7 },
-  statusHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  statusSavedHint: { color: colors.olive, fontSize: 12, fontWeight: '700', marginBottom: 7 },
-  statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
-  statusChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: colors.white },
-  statusChipLocked: { opacity: 0.4 },
-  statusChipText: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-  saveButton: { height: 52, borderRadius: 15, backgroundColor: colors.plum, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  saveButtonDisabled: { opacity: 0.45 },
-  saveButtonText: { color: colors.cream, fontSize: 15, fontWeight: '700' },
-  deleteButton: { height: 52, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  deleteButtonText: { color: colors.orange, fontSize: 14, fontWeight: '700' },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.cream },
+    flex: { flex: 1 },
+    content: { padding: 22, paddingBottom: 40 },
+    loadingText: { color: colors.muted, textAlign: 'center', marginTop: 40, marginHorizontal: 22, marginBottom: 20 },
+    backButton: { alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 15, backgroundColor: colors.plum },
+    headerBackButton: { paddingHorizontal: 8, paddingVertical: 6, marginLeft: 4 },
+    backButtonText: { color: colors.cream, fontSize: 14, fontWeight: '700' },
+    inputLabel: { color: colors.ink, fontSize: 12, fontWeight: '700', marginBottom: 7 },
+    statusHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    statusSavedHint: { color: colors.olive, fontSize: 12, fontWeight: '700', marginBottom: 7 },
+    statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
+    statusChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: colors.white },
+    statusChipLocked: { opacity: 0.4 },
+    statusChipText: { color: colors.muted, fontSize: 12, fontWeight: '600' },
+    saveButton: { height: 52, borderRadius: 15, backgroundColor: colors.plum, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+    saveButtonDisabled: { opacity: 0.45 },
+    saveButtonText: { color: colors.cream, fontSize: 15, fontWeight: '700' },
+    deleteButton: { height: 52, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+    deleteButtonText: { color: colors.orange, fontSize: 14, fontWeight: '700' },
+  });
+}
