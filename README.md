@@ -44,6 +44,11 @@ Nao precisa de Play Store, conta ou internet pra usar depois de instalado — o 
 - Notificacoes locais com dois lembretes por item e deep-link pro item certo.
 - Backup: exportar todos os itens pra um arquivo e importar de volta (aditivo, sem sobrescrever nada).
 - Tela de lojas: agrupa os itens por loja, com detalhe filtrado por loja e autocompletar ao cadastrar/editar.
+- Busca por nome na lista completa.
+- Tela de estatisticas: contagem por status e taxa de itens tratados a tempo.
+- Compartilhar como texto os itens pendentes de uma loja.
+- Resumo diario por notificacao, alem dos lembretes por item.
+- Modo escuro, seguindo automaticamente o tema do sistema.
 
 ## Desenvolvimento
 
@@ -59,6 +64,7 @@ Abra o QR code com o Expo Go no celular conectado a mesma rede.
 ```powershell
 npx tsc --noEmit
 npx expo-doctor
+npm test
 ```
 
 A primeira versao nao usa servidor, login ou servicos pagos.

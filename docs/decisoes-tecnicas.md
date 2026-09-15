@@ -127,3 +127,37 @@ Efeito colateral aceito conscientemente: texto livre sem normalização permite 
 **Correção:** `keyboardShouldPersistTaps="handled"` nos `ScrollView` que envolvem o `ItemForm` (cadastro e edição) — faz o toque em qualquer elemento que já trata o próprio toque (como o `Pressable` da sugestão) ser repassado normalmente, sem fechar o teclado primeiro.
 
 **Lição:** qualquer elemento tocável colocado dentro de um formulário com campos de texto (autocompletar, chips, botões próximos a um input) precisa ser testado com o teclado aberto — o comportamento padrão do scroll pode silenciosamente engolir o toque sem nenhum erro aparente.
+
+## Testes automatizados (v0.4.0)
+
+Configurado [`jest-expo`](https://github.com/expo/expo/tree/main/packages/jest-expo) (`npm test`). Escopo deliberadamente contido: cobre só `lib/records.ts` (funções puras — cálculo de urgência, máscara/validação de data, ordenação, agrupamento por loja, estatísticas, texto de compartilhamento, filtros) e a validação de arquivo de backup em `lib/backup.ts` (`isBackupFile`, exportada especificamente pra ser testável sem precisar mockar sistema de arquivos).
+
+Não cobre telas nem as funções que mexem direto em SQLite/notificações/sistema de arquivos (`exportBackup`, `applyBackup`, `syncRemindersForItem`) — mockar esses módulos nativos teria um retorno pequeno perto do esforço pra um app pessoal; a validação dessas partes continua sendo o teste manual em dispositivo real, como sempre foi nesse projeto.
+
+## Busca por nome
+
+Campo de busca fixo no topo de `app/all-items.tsx`, filtrando por nome (case-insensitive) por cima do filtro/loja que já estava ativo na tela — não é uma tela nova nem uma rota nova, só mais uma camada de filtro client-side sobre os dados já carregados.
+
+## Tela de estatísticas
+
+`lib/records.ts`: `computeStats(records)` calcula contagens por status e uma taxa de "itens tratados a tempo" — definida como `(resolvidos + retirados + trocados) / (resolvidos + retirados + trocados + vencidos)`. Decisão deliberada de **não** tentar calcular métricas por período (ex.: "resolvidos este mês"): o schema não guarda quando um item mudou de status (só `createdAt`), então qualquer estatística "este mês" sobre resolução seria uma suposição sem lastro nos dados. Preferi uma métrica honesta e sempre correta a uma aproximação enganosa.
+
+## Compartilhar itens pendentes de uma loja
+
+Usa o `Share` do próprio React Native (não o `expo-sharing`, que exige um arquivo) pra compartilhar texto puro direto, sem precisar escrever um arquivo temporário. `lib/records.ts`: `buildStoreShareText` monta a mensagem a partir dos itens pendentes daquela loja, ordenados por urgência.
+
+## Resumo diário por notificação: por que a contagem não é 100% ao vivo
+
+Notificações locais recorrentes (`Notifications.SchedulableTriggerInputTypes.DAILY`, disparando todo dia no mesmo horário) têm o **conteúdo fixado no momento em que são agendadas** — não existe execução em segundo plano nesse app que recalcule o texto exatamente na hora do disparo. Solução adotada: reagendar a notificação (cancelar a anterior, recalcular a contagem, agendar de novo) toda vez que a home carrega (`lib/notifications.ts`: `syncDailySummary`), em vez de tentar manter um número perfeitamente ao vivo o dia inteiro. Isso significa que o número mostrado reflete o estado da última vez que o app foi aberto, não o momento exato do disparo — uma limitação aceita conscientemente, documentada no código.
+
+A preferência e o id da notificação agendada ficam guardados numa tabela nova (`settings`, chave/valor genérica — `db/settings.ts`), com a mesma migração idempotente (`CREATE TABLE IF NOT EXISTS`) já usada pro resto do schema.
+
+Tocar na notificação abre `/all-items?filter=Esta semana` em vez de um item específico — o deep-link (`useNotificationDeepLink` em `lib/notifications.ts`) agora distingue esse caso pelo campo `data.type` da notificação.
+
+## Modo escuro: de cores estáticas pra um hook de tema
+
+Antes, `lib/theme.ts` exportava um objeto `colors` fixo, importado e lido uma única vez por cada arquivo, no momento em que `StyleSheet.create({...})` rodava no escopo do módulo (fora de qualquer componente). Isso funciona bem pra um tema só, mas não reage a mudanças: trocar o tema em tempo de execução exige que os estilos sejam recalculados, o que só é possível se esse cálculo acontecer *dentro* do componente, a cada render.
+
+**Mudança de arquitetura:** `lib/theme.ts` virou um hook, `useTheme()`, que escolhe entre `lightColors`/`darkColors` com base no `useColorScheme()` do sistema (sem interruptor manual — decisão deliberada, ver `docs` do vault). Isso exigiu tocar em praticamente toda tela/componente do app (10 arquivos): cada um passou a chamar `const colors = useTheme()` e mover seu `StyleSheet.create` pra dentro de uma função `createStyles(colors)`, memoizada com `useMemo(() => createStyles(colors), [colors])` — recalcula só quando o tema muda, não a cada render. `lib/status.ts` (que derivava cores de status a partir do `colors` estático) virou uma função `statusMeta(colors)` pelo mesmo motivo.
+
+**Detalhe fácil de esquecer:** `app.json` tinha `"userInterfaceStyle": "light"`, uma configuração nativa que trava o app inteiro no modo claro *independente* do que `useColorScheme()` reportaria no JS. Sem mudar isso pra `"automatic"`, nada do trabalho acima teria efeito nenhum — o app simplesmente nunca veria o sistema estar no modo escuro. `StatusBar` também precisou trocar de `style="dark"` fixo pra `style="auto"` (deixa a própria biblioteca decidir claro/escuro).
