@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { Download, Upload } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
@@ -9,7 +9,6 @@ import { useTheme, type ThemeColors } from '../lib/theme';
 import { listItems } from '../db/items';
 
 export default function BackupScreen() {
-  const router = useRouter();
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [itemCount, setItemCount] = useState(0);
